@@ -21,6 +21,9 @@ int main(){
 ///
     while (!*fin){
         errno = 0;          //inicializo esto para q cando de error non de o mismo q o anterior(en cadena vacia)
+        for (int i = 0; i < MAX_TOTAL_COMMAND; ++i) {
+            commando[i] = '\0';
+        }
         printf("#");
         fgets(commando , MAX_TOTAL_COMMAND , stdin);
         procesarEntrada(commando , fin , histComm , listOpen);

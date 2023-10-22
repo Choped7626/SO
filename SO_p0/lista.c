@@ -10,14 +10,16 @@ tList* create_list(){
     return new_list;
 }
 
-void add_to_list(tList* list , void* data){
+void add_to_list(tList* list , void* data , int id){
     tNode *copia;
     tNode* new_node = (tNode*) malloc(sizeof(tNode));
     new_node->data = data;
     new_node->next = NULL;
+    new_node->dfORCommNUm = id;
     if(isEmpty(*list)){
         list->head = new_node;
         list->size++;
+        list->head->dfORCommNUm = id;
         return;
     }else {
         for (copia = list->head; copia->next != NULL; copia = copia->next);
@@ -34,7 +36,7 @@ void* printList(tList list, void (*fptr)(void *)){
     }
 }
 void printStrings(void *n){
-    printf(" %s", (char*) n);
+    printf(" %s\n", (char*)n);
 }
 
 void free_list(tList* list){
@@ -45,6 +47,16 @@ void free_list(tList* list){
         current_node = next_node;
     }
     free(list);
+}
+
+void delete_list(tList* list){
+    tNode* current_node = list->head;
+    while (current_node != NULL){
+        tNode* next_node = current_node->next;
+        free(current_node);
+        current_node = next_node;
+    }
+    list->head = NULL;
 }
 
 bool isEmpty(tList list){
@@ -80,31 +92,23 @@ tPos last(tList list){
 
 
 tPos findCommORdf(tList list , void* data){
-    tNode* aux;
+    tPos aux;
     tPos prim = first(list);
-    for(list ; list.head != NULL ; list.head = prim){
+    for( ; list.head != NULL ; list.head = prim){
         prim = next(prim , list);
-        aux = list.head;
-        struct files* lol[10];
-        for (int i = 0; i < 10; ++i) {
-            lol[i] = (struct files*)aux->data;
-            if(lol[i]->dfORnumComm == (int)data){
-                return list.head;
+        if(list.head->dfORCommNUm == (int)data){
+            aux = list.head;
+            return aux;
             }
-            aux = aux->next;
         }
     }
-}
 
-void* getNode(tList list , tPos P){
-    tNode* sol;
+tNode getNode(tList list , tPos P){//preCD no vacia
     tPos prim = first(list);
     for ( list ; list.head != P ; list.head = prim ) {
         prim = next(prim , list);
-        if(list.head == NULL)
-            return NULL;
     }
-    sol = list.head;
+    tNode sol = *list.head;
     return sol;
 }
 
@@ -112,15 +116,22 @@ bool remove_from_list(tList* list , tPos P){
     if (list->size == 0) {
         return false;
     }
+    tNode *tmp;
     if(P == first(*list)){
-        P = P->next;
+        tmp = list->head;
+        list->head = list->head->next;
+        free(tmp);
+    }else if (P == last(*list)){
+        tPos ult = last(*list);
+        tPos prev = previous(P , *list);
+        prev->next = NULL;
+        free(ult);
     }else{
-        P->data = P->next->data;
-        tPos tmp = P->next;
-        P->next = tmp->next;
-        P = tmp;
+        tPos prev = previous(P , *list);
+        tmp = prev->next;
+        prev->next = tmp->next;
+        free(tmp);
     }
-    free(P);
     list->size--;
     return true;
 }

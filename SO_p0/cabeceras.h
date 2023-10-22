@@ -28,7 +28,7 @@ void dupSO (char *tr[] , tList *listOpen);
 void listOpenFiles (tList *listOpen);
 void infosys ();
 void help (char opciones[]);
-void meterDatos(const int* num , char *tr[], tList *hist , int palabras);
+void meterDatos(const int* num , char *tr[], tList *hist);
 void closeShell (bool *fin);
 void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* recursividad , tList *listOpen);
 void procesarEntrada(char c[] , bool *fin , tList *histComm , tList *listOpen);

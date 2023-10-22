@@ -8,13 +8,8 @@
 
 typedef struct tNode* tPos;
 
-
-typedef struct files{
-    int dfORnumComm;
-    char *name;
-};
-
 typedef struct tNode{
+    long dfORCommNUm;
     void* data;
     struct tNode* next;
 }tNode;
@@ -26,7 +21,7 @@ typedef struct list{
 
 tList* create_list();
 
-void add_to_list(tList* list , void* data);
+void add_to_list(tList* list , void* data , int id);
 
 bool remove_from_list(tList* list , tPos P);
 
@@ -46,8 +41,10 @@ tPos previous(tPos P , tList list);
 
 tPos findCommORdf(tList list , void* data);
 
-void* getNode(tList list , tPos P);
+tNode getNode(tList list , tPos P);
 
 tPos last(tList list);
+
+void delete_list(tList* list);
 
 #endif

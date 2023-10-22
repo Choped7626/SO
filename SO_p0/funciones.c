@@ -66,22 +66,21 @@ void timeSO (){
 void hist (char opciones[] , tList* histCom , int* commNum){
 
     if(opciones == NULL){
-
         printList(*histCom , printStrings);
 
     } else if(strcmp(opciones , "-c") == 0){
-///borrar pero no eliminar?
-        free_list(histCom);
+///borrar pero no eliminar
+        delete_list(histCom);
         *commNum = 0;
 
     }else if(strtol(opciones , NULL , 10) >= 1 && strtol(opciones , NULL , 10) <= histCom->size){
 ///
-        tPos fin = findCommORdf(*histCom , (void*)(int)strtol(opciones , NULL , 10));
+        tList copy;
+        copy = *histCom;
+        tPos fin = findCommORdf(*histCom , (void*)(long)strtol(opciones , NULL , 10));
         for (tPos i = first(*histCom); i != fin->next ; i = next(i , *histCom)) {
-            tNode obj = *(tNode*)getNode(*histCom , i);
-            struct files f = *(struct files*)obj.data;
-            char* str;
-            sprintf(str , "%d %s" , f.dfORnumComm , f.name);
+                (printStrings)(copy.head->data);
+                copy.head = copy.head->next;
         }
 
     }else{
@@ -105,16 +104,28 @@ void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* rec
 
     }else{
 
-        p = findCommORdf(*histComm , (void*)(int)strtol(tr[1] , NULL , 10));
-        I = *(tNode*)getNode(*histComm , p);
+        p = findCommORdf(*histComm , (void*)(long)strtol(tr[1] , NULL , 10));
+        I = getNode(*histComm , p);
         recursividad++;
-        ///
-        struct files f;
-        f = *(struct files*)I.data;
-        char *trozosAux[MAX_TOTAL_COMMAND];
-        TrozearCadena(f.name , trozosAux);
-        whichCommand(trozosAux , histComm , commNum , fin , recursividad , listOpen);
+        ///incapaz de q cando o usa non o borre :(
 
+        char *trozosAux[MAX_TOTAL_COMMAND];
+        char* cadenaH = malloc(sizeof (char *[MAX_TOTAL_COMMAND]));//
+        strcpy(cadenaH , I.data);
+        int pala = TrozearCadena(cadenaH , trozosAux);
+        int i = 0;
+        for(int j = 2 ; j < MAX_TOTAL_COMMAND ; j++) {
+            if (j < pala) {
+                trozosAux[i] = trozosAux[j];
+                i++;
+            } else{
+                trozosAux[i] = NULL;
+                i++;
+                break;
+            }
+        }
+        whichCommand(trozosAux , histComm , commNum , fin , recursividad , listOpen);
+        free(cadenaH);
     }
 }
 
@@ -128,19 +139,19 @@ void openSO (char *tr[] , tList *listOpen) {
     }
 
     for( i = 2 ; tr[i] != NULL ; i++){
-        if(!strcmp(tr[i],"cr")){
+        if(strcmp(tr[i],"cr") == 0){
             mode |= O_CREAT;                //crea un fichero si non existe
-        }else if(!strcmp(tr[i], "ex")) {
+        }else if(strcmp(tr[i], "ex") == 0) {
             mode |= O_EXCL;                 //flag de uso exclusivo¿?
-        }else if(!strcmp(tr[i], "ro")) {
+        }else if(strcmp(tr[i], "ro") == 0) {
             mode |= O_RDONLY;               //abrir solo lectura
-        }else if(!strcmp(tr[i], "wo")) {
+        }else if(strcmp(tr[i], "wo") == 0) {
             mode |= O_WRONLY;               //abrir solo escritura
-        }else if(!strcmp(tr[i], "rw")) {
+        }else if(strcmp(tr[i], "rw") == 0) {
             mode |= O_RDWR;                 //abrir lectura/escritura
-        }else if(!strcmp(tr[i], "ap")) {
+        }else if(strcmp(tr[i], "ap") == 0) {
             mode |= O_APPEND;               //modo adjuntar¿?
-        }else if(!strcmp(tr[i], "tr")) {
+        }else if(strcmp(tr[i], "tr") == 0) {
             mode |= O_TRUNC;                //truca la flag¿?
         }else
             break;
@@ -174,7 +185,7 @@ void deleteOpenFiles(int df, tList *listOpen){
 
     ///
     tPos fich;
-    fich = findCommORdf(*listOpen , (void*)df);
+    fich = findCommORdf(*listOpen , (void*)(long)df);
     if (fich == NULL){
         perror("df inexistente\n");
     } else{
@@ -195,17 +206,27 @@ void dupSO (char *tr[] , tList *listOpen){
 
     duplicado = dup(df);
     ///
-    struct files* q = (struct files*)findCommORdf(*listOpen , (void*)df);
-    p = q->name;
-    sprintf (aux,"dup %d (%s)",df, p);
-    insertOpenFiles(duplicado , p , listOpen , fcntl(duplicado , F_GETFL));
+    tPos p1 = findCommORdf(*listOpen , (void*)(long)df);
+    p = (char*)p1->data;
+    char *cadenaT[MAX_TOTAL_COMMAND];
+
+    int num = TrozearCadena(p , cadenaT);
+
+    if(num < 0)
+        perror("error\n");
+    char* mode = malloc(sizeof (char *));
+    for (int i = 5; cadenaT[i] != NULL; ++i) {
+        strcat(mode , cadenaT[i]);
+    }
+    sprintf (aux,"dup %d (%s)",df, cadenaT[3]);
+    insertOpenFiles(duplicado , aux , listOpen , fcntl(duplicado , F_GETFL));
 }
 
 void listOpenFiles (tList *listOpen){  //recorremos la lista e imprimimos su contenido
 
-    char flagOpen[MAX_NAME_LENGTH];
-    if (isEmpty(*listOpen))
-        printf("Esta vacia\n");
+    if (isEmpty(*listOpen)){
+        perror("Esta vacia\n");
+    }
     else {
         ///
         printList(*listOpen , printStrings);
@@ -215,12 +236,27 @@ void listOpenFiles (tList *listOpen){  //recorremos la lista e imprimimos su con
 
 void insertOpenFiles(int df , const char *nombre , tList *listOpen , int mode){
 ///
-    struct files newFile[1];  //creamos el fichero
-    char* str = malloc(sizeof (char*));
-    newFile->dfORnumComm = df;  //añadimos su df
-    sprintf(str , "%s , %d" , nombre , mode); //su modo //su nombre
-    newFile->name = str;
-    add_to_list(listOpen , (void*)newFile);//insertamos el fichero en la lista
+    char* name = malloc(sizeof (char*[15]));
+    char* flagOpen = malloc(sizeof (char*[8]));
+
+    if ((mode & O_CREAT) != 0)
+        strcat(flagOpen, "O_CREAT ");
+    if ((mode & O_EXCL) != 0)
+        strcat(flagOpen, "O_EXCL ");
+    if ((mode & O_RDONLY) != 0)
+        strcat(flagOpen, "O_RDONLY ");
+    if ((mode & O_WRONLY) != 0)
+        strcat(flagOpen, "O_WRONLY ");
+    if ((mode & O_RDWR) != 0)
+        strcat(flagOpen, "O_RDWR ");
+    if ((mode & O_APPEND) != 0)
+        strcat(flagOpen, "O_APPEND ");
+    if ((mode & O_TRUNC) != 0)
+        strcat(flagOpen, "O_TRUNC ");
+
+    if(sprintf(name , "descriptor: %d -> %s , %s \n" , df , nombre , flagOpen) < 0)
+        perror("error");
+    add_to_list(listOpen , name , df);
 
 }
 
@@ -297,12 +333,17 @@ void help (char opciones[]){
         perror("Comando Inexistente");
 }
 
-void meterDatos(const int* num , char *tr[], tList *hist , int palabras){
+void meterDatos(const int* num , char *tr[], tList *hist){
     ///
-    struct files commName[1];
-    commName[0].dfORnumComm = *num;
-    commName[0].name = *tr;
-    add_to_list(hist , (void*)commName);
+    char *commName = malloc(sizeof(char*[MAX_TOTAL_COMMAND]));          //SIGABRT se fas unha chamada a un comando q ten caracteres de mais e xusto despois fas un hist
+    sprintf(commName , "%d , " , *num );
+    for (int i = 0; i < MAX_TOTAL_COMMAND ; ++i) {
+        if(tr[i] != NULL){
+            strcat(commName, tr[i]);
+            strcat(commName, " ");
+        }else break;
+    }
+    add_to_list(hist , commName , *num);
 
 }
 
@@ -368,6 +409,7 @@ void procesarEntrada(char c[] , bool *fin , tList *histComm , tList *listOpen){
 
     char *tr[MAX_TOTAL_COMMAND];
 
+
     static int num = 0;
     static int *commNum = &num;
 
@@ -377,7 +419,7 @@ void procesarEntrada(char c[] , bool *fin , tList *histComm , tList *listOpen){
     int palabras = TrozearCadena(c , tr);
     if(palabras != 0 && palabras != -1){
         num++;
-        meterDatos(commNum , tr , histComm , palabras);
+        meterDatos(commNum , tr , histComm);
         whichCommand(tr , histComm , commNum , fin , recursividad , listOpen);
     }else
         if(palabras == -1){                                         //SI CADENA DEMASIADO LARGA COLLEA VARIAS VECES , PURGAR STDIN?
@@ -457,27 +499,39 @@ void list(){
 }
 
 void delete(char* tr[]){
+
     if (access(tr[1], F_OK) == 0) {  //Comprobamos que existe el archivo o el directorio
-        if (remove(tr[1]) && errno != 0)   //Comprobamos si se ha producido un error al eliminarlo
-            perror("ERROR\n");
-        else
-            printf("Borrado completado\n");  //Si no hay problema al eliminar, se lanza el siguiente mensaje
-    }else {
-        perror("ERROR\n");  //Si el archivo o el directorio no existe, se lanzara error
+        (rmdir(tr[1]) == 0 || unlink(tr[1]) == 0) ? printf("\n") : perror("ERROR\n");
+    }
+    else {
+        perror("ERROR. El directorio o el archivo no existen\n"); //Si el archivo o el directorio no existe, se lanzara error
     }
 }
 
-void deltree(char* tr[]){//fallos por llamada recursiva e q tr me joda por ser un array
-    struct stat fs;
-    char* borrarfile;
-    stat(tr[1] , &fs);
-    if(S_ISDIR(fs.st_mode)){
-        if(-1 == rmdir(tr[1]))  //caso base
-            perror("error\n");
-                                            //caso recursivo
-    }else if(S_ISREG(fs.st_mode)){  //caso base
+void deltree(char* tr[]) {
+    struct dirent* enter;  //para esto usamos dirent.h
+    DIR* directory = opendir(tr[1]);  //abrimos el directorio y los guardamos en un puntero
+
+    if(!directory) {
+        perror("ERROR\n");  //Lanzamos error si no se puede abrir el directorio
+        return;
+    }
+    while((enter = readdir(directory))) {  //Recorremos el directorio
+        if (strcmp(enter->d_name, ".") == 0 || strcmp(enter->d_name, "..") == 0)
+            continue;
+
+        //Accedemos al directorio
+        char path[PATH_MAX];
+        snprintf(path, sizeof(path), "%s/%s", tr[1], enter->d_name);  //para ello concatenamos la ruta que teniamos con /"nombre de la carpeta que accedemos"
+        char *subtr[] = {NULL, path};
+
+        (enter->d_type == DT_DIR) ? deltree(subtr) : delete(subtr);
+        //Si es un directorio, llamamos a deltree para borrar su contenido
+        //Si es un archivo, llamamos a delete para eliminarlo
 
     }
+    closedir(directory);  //cerramos el directorio actual
+    delete(tr);  //borramos el contenido
 }
 
 /*
