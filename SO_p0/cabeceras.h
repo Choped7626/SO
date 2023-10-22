@@ -11,6 +11,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <errno.h>
+#include <dirent.h>
 #define MAX_TOTAL_COMMAND 100
 
 void authors(char opciones[]);
@@ -36,8 +38,8 @@ void deleteOpenFiles(int df, tList *listOpen);
 char* ConvierteModo(mode_t modo);
 char LetraTF(mode_t modo);
 void create(char* tr[]);
-void statSO();
+void statSO(char *tr[]);
 void list();
-void delete();
-void deltree();
+void delete(char* tr[]);
+void deltree(char* tr[]);
 #endif //SO_P0_CABECERAS_H

@@ -1,62 +1,53 @@
-
 #ifndef SO_P0_LISTA_H
 #define SO_P0_LISTA_H
-#define MAX_OPTIONS 100
-#define MAX_COMMAND_LENGTH 20
 #define MAX_NAME_LENGTH 256
 
-
-#define PNULL NULL
+#include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
 
-typedef int tcommandNum;
-typedef char tcommand[MAX_COMMAND_LENGTH];
-typedef char toptions[MAX_OPTIONS];
+typedef struct tNode* tPos;
 
 
-typedef struct tItem {
-    tcommandNum CommNum;
-    tcommand comm;
-    toptions options1;
-    toptions options2;
-
-}tItem;
-
-typedef struct tNodo* tPos;
-
-struct tNodo{
-    tItem command;
-    tPos next;
-    tPos last;
+typedef struct files{
+    int dfORnumComm;
+    char *name;
 };
 
-typedef tPos tList;
+typedef struct tNode{
+    void* data;
+    struct tNode* next;
+}tNode;
 
+typedef struct list{
+    int size;
+    tNode* head;
+}tList;
 
-void createEmptyList(tList* L);
+tList* create_list();
 
-void deleteList(tList* L);
+void add_to_list(tList* list , void* data);
 
-tPos previous(tPos P , tList L);
+bool remove_from_list(tList* list , tPos P);
 
-bool isEmptyList(tList L);
+void free_list(tList* list);
 
-tPos first(tList L);
+bool isEmpty(tList list);
 
-tPos last(tList L);
+void* printList(tList list , void (*fptr)(void *));
 
-tPos next(tPos P, tList L);
+void printStrings(void* s);//declarar en funciones
 
-bool insertItem(tItem I, tList* L);
+tPos first(tList list);
 
-tList updateLast(tList* L , tPos p);
+tPos next(tPos P , tList list);
 
-tItem getItem(tPos P, tList L);//cd lista no vacia
+tPos previous(tPos P , tList list);
 
-tPos findItem(tcommandNum N , tList L);
+tPos findCommORdf(tList list , void* data);
 
-bool CreateNode(tPos *pos);
+void* getNode(tList list , tPos P);
 
-void deleteAtPosition(tPos pos , tList *L);
+tPos last(tList list);
 
-#endif //SO_P0_LISTA_H
+#endif

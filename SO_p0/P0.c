@@ -9,22 +9,24 @@ int main(){
     bool F = false;
     bool *fin = &F;
 
-    tList histComm;
-    tList listOpen;
+    tList *histComm = create_list();
+    tList *listOpen = create_list();
 
-    createEmptyList(&histComm);
-    createEmptyList(&listOpen);
 
     char commando[MAX_TOTAL_COMMAND];
-
-    insertOpenFiles(0 , "stdin" , &listOpen , 02);
-    insertOpenFiles(1 , "stdout" , &listOpen , 02);
-    insertOpenFiles(2 , "stderr" , &listOpen , 02);
-
+///
+    insertOpenFiles(0 , "stdin" , listOpen , 02);
+    insertOpenFiles(1 , "stdout" , listOpen , 02);
+    insertOpenFiles(2 , "stderr" , listOpen , 02);
+///
     while (!*fin){
+        errno = 0;          //inicializo esto para q cando de error non de o mismo q o anterior(en cadena vacia)
         printf("#");
         fgets(commando , MAX_TOTAL_COMMAND , stdin);
-        procesarEntrada(commando , fin , &histComm , &listOpen);
+        procesarEntrada(commando , fin , histComm , listOpen);
     }
+
+    free_list(histComm);
+    free_list(listOpen);
 
 }

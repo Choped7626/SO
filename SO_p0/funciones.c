@@ -67,22 +67,21 @@ void hist (char opciones[] , tList* histCom , int* commNum){
 
     if(opciones == NULL){
 
-        for (tPos i = first(*histCom); i != PNULL ; i = next(i , *histCom)) {
-            tItem obj = getItem(i , *histCom);
-            printf("%d , %s %s %s\n" , obj.CommNum , obj.comm , obj.options1 , obj.options2 );
-        }
+        printList(*histCom , printStrings);
 
     } else if(strcmp(opciones , "-c") == 0){
-
-        deleteList(histCom);
+///borrar pero no eliminar?
+        free_list(histCom);
         *commNum = 0;
 
-    }else if(strtol(opciones , NULL , 10) >= getItem(first(*histCom) , *histCom).CommNum && strtol(opciones , NULL , 10) <= getItem(last(*histCom) , *histCom).CommNum){
-
-        tPos fin = findItem((int)strtol(opciones , NULL , 10) , *histCom);
+    }else if(strtol(opciones , NULL , 10) >= 1 && strtol(opciones , NULL , 10) <= histCom->size){
+///
+        tPos fin = findCommORdf(*histCom , (void*)(int)strtol(opciones , NULL , 10));
         for (tPos i = first(*histCom); i != fin->next ; i = next(i , *histCom)) {
-            tItem obj = getItem(i , *histCom);
-            printf("%d , %s %s %s\n" , obj.CommNum , obj.comm , obj.options1 , obj.options2 );
+            tNode obj = *(tNode*)getNode(*histCom , i);
+            struct files f = *(struct files*)obj.data;
+            char* str;
+            sprintf(str , "%d %s" , f.dfORnumComm , f.name);
         }
 
     }else{
@@ -93,7 +92,7 @@ void hist (char opciones[] , tList* histCom , int* commNum){
 void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* recursividad , tList *listOpen){
 
     tPos p;
-    tItem I;
+    tNode I;
 
     if(*recursividad == 5){
         printf("error de recursividad infinita\n");
@@ -106,21 +105,14 @@ void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* rec
 
     }else{
 
-        p = findItem((int)strtol(tr[1] , NULL , 10) , *histComm);
-        I = getItem(p , *histComm);
+        p = findCommORdf(*histComm , (void*)(int)strtol(tr[1] , NULL , 10));
+        I = *(tNode*)getNode(*histComm , p);
         recursividad++;
-        char cadenaLista[MAX_TOTAL_COMMAND];
-        for (int i = 0; i < MAX_TOTAL_COMMAND; ++i) {
-            cadenaLista[i] = '\0';
-        }
-        strcat(cadenaLista, I.comm);
-        strcat(cadenaLista, " ");
-        strcat(cadenaLista, I.options1);
-        strcat(cadenaLista, " ");
-        strcat(cadenaLista, I.options2);
-        strcat(cadenaLista, " ");
-        char *trozosAux[5];
-        TrozearCadena(cadenaLista , trozosAux);
+        ///
+        struct files f;
+        f = *(struct files*)I.data;
+        char *trozosAux[MAX_TOTAL_COMMAND];
+        TrozearCadena(f.name , trozosAux);
         whichCommand(trozosAux , histComm , commNum , fin , recursividad , listOpen);
 
     }
@@ -180,12 +172,13 @@ void closeSO (char *tr[] , tList *listOpen){
 
 void deleteOpenFiles(int df, tList *listOpen){
 
+    ///
     tPos fich;
-    fich = findItem(df , *listOpen);
-    if (fich == PNULL){
+    fich = findCommORdf(*listOpen , (void*)df);
+    if (fich == NULL){
         perror("df inexistente\n");
     } else{
-        deleteAtPosition(fich , listOpen);
+        remove_from_list(listOpen, fich);
         listOpenFiles(listOpen);
     }
 }
@@ -193,7 +186,7 @@ void deleteOpenFiles(int df, tList *listOpen){
 void dupSO (char *tr[] , tList *listOpen){
 
     int df, duplicado;
-    char aux[MAX_COMMAND_LENGTH],*p;
+    char aux[MAX_NAME_LENGTH],*p;
 
     if (tr[1]==NULL || (df=atoi(tr[1])) < 0) { /*no hay parametro*/
         listOpenFiles(listOpen);                /*o el descriptor es menor que 0*/
@@ -201,45 +194,34 @@ void dupSO (char *tr[] , tList *listOpen){
     }
 
     duplicado = dup(df);
-    p = findItem(df , *listOpen)->command.comm;
+    ///
+    struct files* q = (struct files*)findCommORdf(*listOpen , (void*)df);
+    p = q->name;
     sprintf (aux,"dup %d (%s)",df, p);
     insertOpenFiles(duplicado , p , listOpen , fcntl(duplicado , F_GETFL));
 }
 
 void listOpenFiles (tList *listOpen){  //recorremos la lista e imprimimos su contenido
-    char flagOpen[MAX_COMMAND_LENGTH];
-    tPos pos = *listOpen;
-    if (isEmptyList(*listOpen))
+
+    char flagOpen[MAX_NAME_LENGTH];
+    if (isEmpty(*listOpen))
         printf("Esta vacia\n");
     else {
-        for (; pos != PNULL; pos = pos->next) {
-            if (strcmp (pos->command.options1 , "64") == 0){
-                strcpy(flagOpen, "O_CREAT");
-            }else if(strcmp (pos->command.options1 , "128") == 0){
-                strcpy(flagOpen, "O_EXCL");
-            }else if(strcmp (pos->command.options1 , "0") == 0){
-                strcpy(flagOpen, "O_RDONLY");
-            }else if(strcmp (pos->command.options1 , "1") == 0){
-                strcpy(flagOpen, "O_WRONLY");
-            }else if(strcmp (pos->command.options1 , "2") == 0){
-                strcpy(flagOpen, "O_RDWR");
-            }else if(strcmp (pos->command.options1 , "1024") == 0){
-                strcpy(flagOpen, "O_APPEND");
-            }else if(strcmp (pos->command.options1 , "512") == 0){
-                strcpy(flagOpen, "O_TRUNC");
-            }
-            printf("descriptor: %d -> %s %s\n", pos->command.CommNum, pos->command.comm, flagOpen);
-        }
+        ///
+        printList(*listOpen , printStrings);
     }
+
 }
 
 void insertOpenFiles(int df , const char *nombre , tList *listOpen , int mode){
-    tItem newFile;  //creamos el fichero
-    newFile.CommNum = df;  //añadimos su df
-    sprintf(newFile.options1 , "%d" , mode); //su modo
-    strcpy(newFile.options2,"NULL");
-    strcpy(newFile.comm, nombre);  //su nombre
-    insertItem(newFile, listOpen);  //insertamos el fichero en la lista
+///
+    struct files newFile[1];  //creamos el fichero
+    char* str = malloc(sizeof (char*));
+    newFile->dfORnumComm = df;  //añadimos su df
+    sprintf(str , "%s , %d" , nombre , mode); //su modo //su nombre
+    newFile->name = str;
+    add_to_list(listOpen , (void*)newFile);//insertamos el fichero en la lista
+
 }
 
 void infosys (){
@@ -316,13 +298,11 @@ void help (char opciones[]){
 }
 
 void meterDatos(const int* num , char *tr[], tList *hist , int palabras){
-
-    tItem commName;
-    commName.CommNum = *num;
-    palabras > 0 ? strcpy(commName.comm , tr[0]) : strcpy(commName.comm , "");
-    palabras > 1 ? strcpy(commName.options1 , tr[1]) : strcpy(commName.options1 , "");
-    palabras > 2 ? strcpy(commName.options2 , tr[2]) : strcpy(commName.options2 , "");
-    insertItem(commName , hist);
+    ///
+    struct files commName[1];
+    commName[0].dfORnumComm = *num;
+    commName[0].name = *tr;
+    add_to_list(hist , (void*)commName);
 
 }
 
@@ -359,13 +339,13 @@ void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* 
     else if (strcmp(tr[0] , "create") == 0)
         create(tr);
     else if (strcmp(tr[0] , "stat") == 0)
-        statSO();
+        statSO(tr);
     else if (strcmp(tr[0] , "list") == 0)
         list();
     else if (strcmp(tr[0] , "delete") == 0)
-        delete();
+        delete(tr);
     else if (strcmp(tr[0] , "deltree") == 0)
-        deltree();
+        deltree(tr);
     else if (strcmp(tr[0], "help") == 0)
         help(tr[1]);
     else if ((strcmp(tr[0], "quit") == 0) || (strcmp(tr[0], "exit") == 0) || (strcmp(tr[0], "bye") == 0))
@@ -380,12 +360,13 @@ int TrozearCadena(char* cadena , char* tr[]){
         return 0;
     while ((tr[i]=strtok(NULL," \n\t"))!=NULL)
         i++;
+    i > 49 ? i = -1 : i;
     return i;
 }
 
 void procesarEntrada(char c[] , bool *fin , tList *histComm , tList *listOpen){
 
-    char *tr[5];
+    char *tr[MAX_TOTAL_COMMAND];
 
     static int num = 0;
     static int *commNum = &num;
@@ -394,12 +375,16 @@ void procesarEntrada(char c[] , bool *fin , tList *histComm , tList *listOpen){
     int *recursividad = &controlRecur;
 
     int palabras = TrozearCadena(c , tr);
-    if(palabras != 0){
+    if(palabras != 0 && palabras != -1){
         num++;
         meterDatos(commNum , tr , histComm , palabras);
         whichCommand(tr , histComm , commNum , fin , recursividad , listOpen);
-    } else
-        perror("\ncadena vacia");
+    }else
+        if(palabras == -1){                                         //SI CADENA DEMASIADO LARGA COLLEA VARIAS VECES , PURGAR STDIN?
+            perror("Cadena demasiado grande");
+
+        }else
+            perror("Cadena Vacia");
 }
 
 char LetraTF (mode_t m){
@@ -444,36 +429,55 @@ void create(char* tr[]){
     FILE *fl;
     int df;
     mode_t m;
-    m = S_IFREG | S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IXOTH | S_ISUID | S_ISGID;
+    m = 0775;
 
     if (tr[1] == NULL) { /*no hay paramentro*/
         perror("Imposible crear el fichero");
-
     }else if(strcmp(tr[1] , "-f") == 0) {
         fl = fopen(tr[2] , "w");
         if (fl == NULL)
             perror("Imposible crear el fichero");
         chmod(tr[2] , m);
     }else{
-        df = mkdir(tr[1] , m);
+        df = mkdir(tr[1] , 0777);
         if(df == -1){
             perror("Imposible crear el fichero");
         }
-        chmod(tr[1] , m);
+        chmod(tr[1] , 0775);
     }
 }
 
-void statSO(){
+void statSO(char *tr[]){
+    char cwd[256];
 
 }
+
 void list(){
 
 }
-void delete(){
 
+void delete(char* tr[]){
+    if (access(tr[1], F_OK) == 0) {  //Comprobamos que existe el archivo o el directorio
+        if (remove(tr[1]) && errno != 0)   //Comprobamos si se ha producido un error al eliminarlo
+            perror("ERROR\n");
+        else
+            printf("Borrado completado\n");  //Si no hay problema al eliminar, se lanza el siguiente mensaje
+    }else {
+        perror("ERROR\n");  //Si el archivo o el directorio no existe, se lanzara error
+    }
 }
-void deltree(){
 
+void deltree(char* tr[]){//fallos por llamada recursiva e q tr me joda por ser un array
+    struct stat fs;
+    char* borrarfile;
+    stat(tr[1] , &fs);
+    if(S_ISDIR(fs.st_mode)){
+        if(-1 == rmdir(tr[1]))  //caso base
+            perror("error\n");
+                                            //caso recursivo
+    }else if(S_ISREG(fs.st_mode)){  //caso base
+
+    }
 }
 
 /*
