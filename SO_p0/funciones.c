@@ -120,7 +120,6 @@ void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* rec
                 i++;
             } else{
                 trozosAux[i] = NULL;
-                i++;
                 break;
             }
         }
@@ -197,7 +196,7 @@ void deleteOpenFiles(int df, tList *listOpen){
 void dupSO (char *tr[] , tList *listOpen){
 
     int df, duplicado;
-    char aux[MAX_NAME_LENGTH],*p;
+    char aux[MAX_NAME_LENGTH],*p = malloc(sizeof (char *[MAX_TOTAL_COMMAND])) ;
 
     if (tr[1]==NULL || (df=atoi(tr[1])) < 0) { /*no hay parametro*/
         listOpenFiles(listOpen);                /*o el descriptor es menor que 0*/
@@ -207,7 +206,7 @@ void dupSO (char *tr[] , tList *listOpen){
     duplicado = dup(df);
     ///
     tPos p1 = findCommORdf(*listOpen , (void*)(long)df);
-    p = (char*)p1->data;
+    strcpy(p , p1->data);
     char *cadenaT[MAX_TOTAL_COMMAND];
 
     int num = TrozearCadena(p , cadenaT);
