@@ -41,7 +41,7 @@ char* ConvierteModo(mode_t modo);
 char LetraTF(mode_t modo);
 void create(char* tr[]);
 void statSO(char *tr[]);
-void list();
+void list(char* tr[]);
 void delete(char* tr[]);
 void deltree(char* tr[]);
 #endif //SO_P0_CABECERAS_H

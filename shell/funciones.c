@@ -373,7 +373,7 @@ void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* 
     else if (strcmp(tr[0] , "stat") == 0)
         statSO(tr);
     else if (strcmp(tr[0] , "list") == 0)
-        list();
+        list(tr);
     else if (strcmp(tr[0] , "delete") == 0)
         delete(tr);
     else if (strcmp(tr[0] , "deltree") == 0)
@@ -485,22 +485,20 @@ void statSO(char* tr[]){
     int use_long = 0, use_link = 0, use_acc = 0, name = 0;  //contadores para saber si se usa alguna de las opciones
     int i = 1;
     long size = PATH_MAX;
+    struct stat info;
 
     while(i != 4) {
         if(tr[i] == NULL) break;
         if(strcmp(tr[i], "-long") == 0) {
             use_long = 1;
             i++;
-        }
-        else if(strcmp(tr[i], "-link") == 0) {
+        }else if(strcmp(tr[i], "-link") == 0) {
             use_link = 1;
             i++;
-        }
-        else if(strcmp(tr[i], "-acc") == 0) {
+        }else if(strcmp(tr[i], "-acc") == 0) {
             use_acc = 1;
             i++;
-        }
-        else if(strcmp(tr[i], "-long") != 0 && strcmp(tr[i], "-link") != 0 && strcmp(tr[i], "-acc") != 0){
+        }else if(strcmp(tr[i], "-long") != 0 && strcmp(tr[i], "-link") != 0 && strcmp(tr[i], "-acc") != 0){
             name = i;
             break;
         }
@@ -515,7 +513,6 @@ void statSO(char* tr[]){
         if((f = fopen(tr[name] , "r")) != NULL){
 
             fclose(f);
-            struct stat info;
             lstat(tr[name] , &info);
             size = info.st_size;
 
@@ -562,7 +559,50 @@ void statSO(char* tr[]){
     }
 }
 
-void list(){
+void list(char* tr[]){
+
+    char* llamadaAux[MAX_TOTAL_COMMAND];
+    llamadaAux[0] = NULL;
+
+    int pos = 0 , i = 1 , cnt = 1 , use_hid = 0 , use_reca = 0 , use_recb = 0;
+
+    while(i != 7) {
+        if(tr[i] == NULL) break;
+        if(strcmp(tr[i], "-long") == 0) {
+            strcat(llamadaAux[cnt] , "-long");
+            cnt++;
+            i++;
+        }else if(strcmp(tr[i], "-link") == 0) {
+            strcat(llamadaAux[cnt] , "-link");
+            cnt++;
+            i++;
+        }else if(strcmp(tr[i], "-acc") == 0) {
+            strcat(llamadaAux[cnt] , "-acc");
+            cnt++;
+            i++;
+        }else if(strcmp(tr[i], "-hid") == 0) {
+            use_hid = 1;
+            i++;
+        }else if(strcmp(tr[i], "-reca") == 0) {
+            use_reca = 1;
+            i++;
+        }else if(strcmp(tr[i], "-recb") == 0) {
+            use_recb = 1;
+            i++;
+        }else if(tr[i] != NULL){
+            pos = i;
+            break;
+        }
+    }
+    if(pos == 0)
+        pos = i;
+
+    for (; tr[pos] != NULL ; pos++) {
+
+
+
+    }
+
 
 }
 
