@@ -1,3 +1,0 @@
-/home/mario/Documentos/SO/p0/SO_p0/cmake-build-debug/CMakeFiles/SO_p0.dir
-/home/mario/Documentos/SO/p0/SO_p0/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/mario/Documentos/SO/p0/SO_p0/cmake-build-debug/CMakeFiles/rebuild_cache.dir
