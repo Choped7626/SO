@@ -92,7 +92,7 @@ void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* rec
     tPos p;
     tNode I;
 
-    if(*recursividad == 5){
+    if(*recursividad == 5){ //Comprobación de recursividad infinita
         printf("error de recursividad infinita\n");
         return;
     }
@@ -106,23 +106,21 @@ void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* rec
         p = findCommORdf(*histComm , (void*)(long)strtol(tr[1] , NULL , 10));
         I = getNode(*histComm , p);
         recursividad++;
-        ///incapaz de q cando o usa non o borre :(
 
-        char *trozosAux[MAX_TOTAL_COMMAND];
-        char* cadenaH = malloc(sizeof (char *[MAX_TOTAL_COMMAND]));//
-        strcpy(cadenaH , I.data);
-        int pala = TrozearCadena(cadenaH , trozosAux);
+        char* cadenaH = strdup(I.data);// Duplicamos la cadena para no modificar la original
+        int pala = TrozearCadena(cadenaH , tr);  //Didimos la cadena en trozos
+
         int i = 0;
         for(int j = 2 ; j < MAX_TOTAL_COMMAND ; j++) {
             if (j < pala) {
-                trozosAux[i] = trozosAux[j];
+                tr[i] = tr[j];
                 i++;
             } else{
-                trozosAux[i] = NULL;
+                tr[i] = NULL;
                 break;
             }
         }
-        whichCommand(trozosAux , histComm , commNum , fin , recursividad , listOpen);
+        whichCommand(tr ,  histComm , commNum , fin , recursividad , listOpen);
         free(cadenaH);
     }
 }
@@ -338,7 +336,6 @@ void meterDatos(const int* num , char *tr[], tList *hist){
         }else break;
     }
     add_to_list(hist , commName , *num);
-
 }
 
 void closeShell (bool *fin){
@@ -483,9 +480,86 @@ void create(char* tr[]){
     }
 }
 
-void statSO(char *tr[]){
-    char cwd[256];
+void statSO(char* tr[]){
 
+    int use_long = 0, use_link = 0, use_acc = 0, name = 0;  //contadores para saber si se usa alguna de las opciones
+    int i = 1;
+    long size = PATH_MAX;
+
+    while(i != 4) {
+        if(tr[i] == NULL) break;
+        if(strcmp(tr[i], "-long") == 0) {
+            use_long = 1;
+            i++;
+        }
+        else if(strcmp(tr[i], "-link") == 0) {
+            use_link = 1;
+            i++;
+        }
+        else if(strcmp(tr[i], "-acc") == 0) {
+            use_acc = 1;
+            i++;
+        }
+        else if(strcmp(tr[i], "-long") != 0 && strcmp(tr[i], "-link") != 0 && strcmp(tr[i], "-acc") != 0){
+            name = i;
+            break;
+        }
+    }
+    if(name == 0)
+        name = i;
+
+    FILE *f;
+
+    for (; tr[name] != NULL ; name++) {
+
+        if((f = fopen(tr[name] , "r")) != NULL){
+
+            fclose(f);
+            struct stat info;
+            lstat(tr[name] , &info);
+            size = info.st_size;
+
+        if(use_long == 1){
+
+            char hora[50];
+            strftime(hora, sizeof(hora), "%c", localtime(&info.st_mtim.tv_sec));//hora de ultima modificacion
+            int links = (int) info.st_nlink;
+            int inodo = (int) info.st_ino;
+            char *permiss = ConvierteModo(info.st_mode);
+            char direccionLinkPrint[PATH_MAX + 1] = "";
+
+            if(use_link == 1){//usa long e link
+                char direccionLink[PATH_MAX + 1] = "";
+                if (readlink(tr[name], direccionLink, PATH_MAX) == -1) {
+                    printf("");
+                }else {
+                    if (strlen(direccionLink) > 0) {
+                        strcat(direccionLinkPrint, " -> ");
+                        strcat(direccionLinkPrint, direccionLink);
+                    }
+                }
+            }
+
+            if(use_acc == 1){//usa long e acc
+
+                strftime(hora, sizeof(hora), "%c", localtime(&info.st_atim.tv_sec));//hora de ultimo acceso
+
+            }//usa solo long
+
+            printf("%25s %3d(%8d) %10s %10s %10s %6ld %15s%15s\n", hora, links, inodo, getpwuid(info.st_uid)->pw_name,
+                       getgrgid(info.st_gid)->gr_name, permiss, size, tr[name] , direccionLinkPrint);
+
+        }else{
+            printf("%6ld %15s\n" , size , tr[name]);
+        }
+        }else{
+            printf("error al accder a %s\n" , tr[name]);
+            perror("\n");
+        }
+    }
+    if(tr[1] == NULL){
+        chdirSO(tr[1]);
+    }
 }
 
 void list(){
@@ -495,7 +569,7 @@ void list(){
 void delete(char* tr[]){
 
     if (access(tr[1], F_OK) == 0) {  //Comprobamos que existe el archivo o el directorio
-        (rmdir(tr[1]) == 0 || unlink(tr[1]) == 0) ? printf("\n") : perror("ERROR\n");
+        (rmdir(tr[1]) == 0 || unlink(tr[1]) == 0) ? printf("Borrado de %s Completado\n" , tr[1]) : perror("ERROR\n");
     }
     else {
         perror("ERROR. El directorio o el archivo no existen\n"); //Si el archivo o el directorio no existe, se lanzara error
@@ -517,9 +591,10 @@ void deltree(char* tr[]) {
         //Accedemos al directorio
         char path[PATH_MAX];
         snprintf(path, sizeof(path), "%s/%s", tr[1], enter->d_name);  //para ello concatenamos la ruta que teniamos con /"nombre de la carpeta que accedemos"
-        char *subtr[] = {NULL, path};
-
-        (enter->d_type == DT_DIR) ? deltree(subtr) : delete(subtr);
+        char *subtr[] = { NULL,path};
+        struct stat info;
+        if(stat(path, &info) == 0)
+            (S_ISDIR(info.st_mode)) ? deltree(subtr) : delete(subtr);
         //Si es un directorio, llamamos a deltree para borrar su contenido
         //Si es un archivo, llamamos a delete para eliminarlo
 
@@ -527,7 +602,6 @@ void deltree(char* tr[]) {
     closedir(directory);  //cerramos el directorio actual
     delete(tr);  //borramos el contenido
 }
-
 /*
     if((typeCom != 7) && (strcmp(opciones2 , "@") != 0)){
         º("Opcion de comando '%s' inexistente\n" , opciones2);//⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️

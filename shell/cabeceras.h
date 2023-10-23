@@ -13,6 +13,8 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <dirent.h>
+#include <pwd.h>
+#include <grp.h>
 #define MAX_TOTAL_COMMAND 100
 
 void authors(char opciones[]);
