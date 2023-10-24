@@ -557,6 +557,97 @@ void statSO(char* tr[]){
     }
 }
 
+void reca(int cnt , char* llamadaAux[] , int use_hid , char* pathInicial){
+
+    struct dirent *dp;
+    struct dirent *aux;
+    char path[1000];
+
+    DIR* d = opendir(pathInicial);
+
+    if (!d)
+        return;
+
+    printf("************%s\n" , pathInicial);
+    while ((aux = readdir(d)) != NULL){
+        if (use_hid == 1) {
+            llamadaAux[cnt] = aux->d_name;
+            chdir(pathInicial);
+            statSO(llamadaAux);
+            chdir(path);
+        } else if (aux->d_name[0] != '.') {
+            llamadaAux[cnt] = aux->d_name;
+            chdir(pathInicial);
+            statSO(llamadaAux);
+            chdir(path);
+        }
+    }
+
+    DIR* c = opendir(pathInicial);
+    if (!c)
+        return;
+
+    while ((dp = readdir(c)) != NULL){
+        if(dp->d_name[0] != '.'){
+            strcpy(path , pathInicial);
+            strcat(path , "/");
+            strcat(path , dp->d_name);
+        }else
+            strcpy(path , pathInicial);
+
+        if(dp->d_name[0] != '.')
+            reca(cnt , llamadaAux , use_hid , path);
+    }
+    closedir(d);
+    closedir(c);
+}
+
+void recb(int cnt , char* llamadaAux[] , int use_hid , char* pathInicial){
+
+    struct dirent *dp;
+    struct dirent *aux;
+    char path[1000];
+
+    DIR* c = opendir(pathInicial);
+    if (!c)
+        return;
+
+    while ((dp = readdir(c)) != NULL){
+        if(dp->d_name[0] != '.'){
+            strcpy(path , pathInicial);
+            strcat(path , "/");
+            strcat(path , dp->d_name);
+        }else
+            strcpy(path , pathInicial);
+
+        if(dp->d_name[0] != '.')
+            recb(cnt , llamadaAux , use_hid , path);
+    }
+
+    DIR* d = opendir(pathInicial);
+
+    if (!d)
+        return;
+
+    printf("************%s\n" , pathInicial);
+    while ((aux = readdir(d)) != NULL){
+        if (use_hid == 1) {
+            llamadaAux[cnt] = aux->d_name;
+            chdir(pathInicial);
+            statSO(llamadaAux);
+            chdir(path);
+        } else if (aux->d_name[0] != '.') {
+            llamadaAux[cnt] = aux->d_name;
+            chdir(pathInicial);
+            statSO(llamadaAux);
+            chdir(path);
+        }
+    }
+
+    closedir(d);
+    closedir(c);
+}
+
 void list(char* tr[]){
 
     char* llamadaAux[MAX_TOTAL_COMMAND];
@@ -605,16 +696,25 @@ void list(char* tr[]){
             struct dirent *dp;
 
             if(use_reca == 1){
-                printf("**************%s\n" , tr[pos]);
-                listFilesRecursively(tr[pos]);
+                char pathInicial[PATH_MAX];
+                getcwd(pathInicial , sizeof (pathInicial));
+                strcat(pathInicial , "/");
+                strcat(pathInicial , tr[pos]);
+                reca(cnt , llamadaAux , use_hid , pathInicial);
+                chdir(cwd);
             }
             if (use_recb == 1){
-                printf("work in progress\n");//if hid
+                char pathInicial2[PATH_MAX];
+                getcwd(pathInicial2 , sizeof (pathInicial2));
+                strcat(pathInicial2 , "/");
+                strcat(pathInicial2 , tr[pos]);
+                recb(cnt , llamadaAux , use_hid , pathInicial2);
+                chdir(cwd);
             }
 
             if(use_reca == 0 && use_recb == 0 ) {
                 printf("**********%s\n" , tr[pos]);
-                for (dp = readdir(d); dp != NULL; dp = readdir(d)) {///optimizar
+                while ((dp = readdir(d))!= NULL){///optimizar
                     if (use_hid == 1) {
                         llamadaAux[cnt] = dp->d_name;
                         chdir(tr[pos]);
@@ -628,7 +728,7 @@ void list(char* tr[]){
                     }
                 }
             }
-
+            closedir(d);
         }else{
             llamadaAux[cnt] = tr[pos];
             statSO(llamadaAux);///optimizar,cada archivo chama a stat solo con ese archivo
