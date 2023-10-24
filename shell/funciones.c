@@ -270,6 +270,7 @@ void infosys (){
     printf("Hardware: %s\n", uts.machine);
 }
 
+//añadir nuevos comandos
 void help (char opciones[]){
 
     if (opciones == NULL){
@@ -434,7 +435,6 @@ char LetraTF (mode_t m){
     }
 }
 
-
 char * ConvierteModo (mode_t m)
 {
     static char permisos[12];
@@ -506,13 +506,10 @@ void statSO(char* tr[]){
     if(name == 0)
         name = i;
 
-    FILE *f;
-
     for (; tr[name] != NULL ; name++) {
 
-        if((f = fopen(tr[name] , "r")) != NULL){
+        if(access(tr[name], F_OK) == 0){
 
-            fclose(f);
             lstat(tr[name] , &info);
             size = info.st_size;
 
@@ -528,7 +525,7 @@ void statSO(char* tr[]){
             if(use_link == 1){//usa long e link
                 char direccionLink[PATH_MAX + 1] = "";
                 if (readlink(tr[name], direccionLink, PATH_MAX) == -1) {
-                    printf("");
+
                 }else {
                     if (strlen(direccionLink) > 0) {
                         strcat(direccionLinkPrint, " -> ");
@@ -549,13 +546,14 @@ void statSO(char* tr[]){
         }else{
             printf("%6ld %15s\n" , size , tr[name]);
         }
+
         }else{
             printf("error al accder a %s\n" , tr[name]);
             perror("\n");
         }
     }
-    if(tr[1] == NULL){
-        chdirSO(tr[1]);
+    if(tr[i] == NULL){
+        chdirSO(tr[i]);
     }
 }
 
@@ -569,15 +567,15 @@ void list(char* tr[]){
     while(i != 7) {
         if(tr[i] == NULL) break;
         if(strcmp(tr[i], "-long") == 0) {
-            strcat(llamadaAux[cnt] , "-long");
+            llamadaAux[cnt] = "-long";
             cnt++;
             i++;
         }else if(strcmp(tr[i], "-link") == 0) {
-            strcat(llamadaAux[cnt] , "-link");
+            llamadaAux[cnt] = "-link";
             cnt++;
             i++;
         }else if(strcmp(tr[i], "-acc") == 0) {
-            strcat(llamadaAux[cnt] , "-acc");
+            llamadaAux[cnt] = "-acc";
             cnt++;
             i++;
         }else if(strcmp(tr[i], "-hid") == 0) {
@@ -597,13 +595,48 @@ void list(char* tr[]){
     if(pos == 0)
         pos = i;
 
+    DIR* d;
+    char cwd[PATH_MAX];
+    getcwd(cwd , sizeof(cwd));
     for (; tr[pos] != NULL ; pos++) {
 
+        if ((d = opendir(tr[pos])) != NULL){
 
+            struct dirent *dp;
 
+            if(use_reca == 1){
+                printf("**************%s\n" , tr[pos]);
+                listFilesRecursively(tr[pos]);
+            }
+            if (use_recb == 1){
+                printf("work in progress\n");//if hid
+            }
+
+            if(use_reca == 0 && use_recb == 0 ) {
+                printf("**********%s\n" , tr[pos]);
+                for (dp = readdir(d); dp != NULL; dp = readdir(d)) {///optimizar
+                    if (use_hid == 1) {
+                        llamadaAux[cnt] = dp->d_name;
+                        chdir(tr[pos]);
+                        statSO(llamadaAux);
+                        chdir(cwd);
+                    } else if (dp->d_name[0] != '.') {
+                        llamadaAux[cnt] = dp->d_name;
+                        chdir(tr[pos]);
+                        statSO(llamadaAux);
+                        chdir(cwd);
+                    }
+                }
+            }
+
+        }else{
+            llamadaAux[cnt] = tr[pos];
+            statSO(llamadaAux);///optimizar,cada archivo chama a stat solo con ese archivo
+        }
     }
-
-
+    if(tr[i] == NULL){
+        chdirSO(tr[i]);
+    }
 }
 
 void delete(char* tr[]){
@@ -642,11 +675,4 @@ void deltree(char* tr[]) {
     closedir(directory);  //cerramos el directorio actual
     delete(tr);  //borramos el contenido
 }
-/*
-    if((typeCom != 7) && (strcmp(opciones2 , "@") != 0)){
-        º("Opcion de comando '%s' inexistente\n" , opciones2);//⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
-        return;
-    }
-*/
 
-//si meter mas cousas das necesarias q de error q non pete
