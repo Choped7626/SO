@@ -5,6 +5,9 @@
 
 tList* create_list(){
     tList* new_list = (tList*)malloc(sizeof(tList));
+    if(new_list == NULL) {
+        return NULL;
+    }
     new_list->size = 0;
     new_list->head = NULL;
     return new_list;
@@ -16,6 +19,8 @@ void free_node_data(void* data){
 
 void add_to_list(tList* list , void* data , int id){
     tNode* new_node = (tNode*) malloc(sizeof(tNode*));
+    if(new_node == NULL)
+        return;
     new_node->data = malloc(sizeof (char*[15]));
     memcpy(new_node->data , data , sizeof (char*[15]));
     new_node->next = NULL;
@@ -111,10 +116,10 @@ tPos findCommORdf(tList list , void* data){
         if(list.head->dfORCommNUm == (long)data){
             aux = list.head;
             return aux;
-            }
         }
-    return NULL;
     }
+    return NULL;
+}
 
 tNode getNode(tList list , tPos P){//preCD no vacia
     tPos prim = first(list);
