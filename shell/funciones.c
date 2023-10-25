@@ -1,3 +1,7 @@
+/*
+Nombre: Daniel Puñal Diaz       Login:  daniel.punal.diaz@udc.es    Grupo:3.2
+Nombre: Mario Lamas Angeriz     Login: m.lamasa@udc.es              Grupo:3.2
+*/
 #include "cabeceras.h"
 
 void authors(char opciones[]){
@@ -121,7 +125,6 @@ void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* rec
             }
         }
         whichCommand(tr ,  histComm , commNum , fin , recursividad , listOpen);
-        free(cadenaH);
     }
 }
 
@@ -192,10 +195,13 @@ void deleteOpenFiles(int df, tList *listOpen){
 
 void dupSO (char *tr[] , tList *listOpen){
 
-    int df, duplicado;
-    char aux[MAX_NAME_LENGTH],*p = malloc(sizeof (char *[MAX_TOTAL_COMMAND])) ;
+    int df = (int)strtol(tr[1] , NULL , 10), duplicado;
+    char aux[MAX_NAME_LENGTH];
+    char *p = malloc(sizeof (char *[MAX_TOTAL_COMMAND])) ;
 
-    if (tr[1]==NULL || (df=atoi(tr[1])) < 0 || (df=atoi(tr[1])) > last(*listOpen)->dfORCommNUm) { /*no hay parametro*/
+
+
+    if (tr[1]==NULL || df < 0 || df > last(*listOpen)->dfORCommNUm) { /*no hay parametro*/
         listOpenFiles(listOpen);                /*o el descriptor es menor que 0*/
         return;
     }
@@ -208,10 +214,14 @@ void dupSO (char *tr[] , tList *listOpen){
 
     int num = TrozearCadena(p , cadenaT);
     free(p);
-    if(num < 0)
-        perror("error\n");
+
+    if(num < 0){
+        perror("No se pudo duplicar el archivo\n");
+        return;
+    }
     sprintf (aux,"dup %d (%s)",df, cadenaT[3]);
     insertOpenFiles(duplicado , aux , listOpen , fcntl(duplicado , F_GETFL));
+    printf("Añadida entrada a la tabla de ficheros abiertos\n");
 }
 
 void listOpenFiles (tList *listOpen){  //recorremos la lista e imprimimos su contenido
@@ -226,30 +236,33 @@ void listOpenFiles (tList *listOpen){  //recorremos la lista e imprimimos su con
 
 }
 
+
 void insertOpenFiles(int df , const char *nombre , tList *listOpen , int mode){
 ///
-    char* name = malloc(sizeof (char*[15]));
-    char* flagOpen = malloc(sizeof (char*[8]));
+    char* name = malloc(sizeof (char*[23]));
+
+    if(sprintf(name , "descriptor: %d -> %s" , df , nombre) < 0){
+        perror("no se pudo  insertar el archivo en la lista de archivos abiertos\n");
+        return;
+    }
 
     if ((mode & O_CREAT) != 0)
-        strcat(flagOpen, "O_CREAT ");
+        strcat(name, " , O_CREAT ");
     if ((mode & O_EXCL) != 0)
-        strcat(flagOpen, "O_EXCL ");
+        strcat(name, " , O_EXCL ");
     if ((mode & O_RDONLY) != 0)
-        strcat(flagOpen, "O_RDONLY ");
+        strcat(name, " , O_RDONLY ");
     if ((mode & O_WRONLY) != 0)
-        strcat(flagOpen, "O_WRONLY ");
+        strcat(name, " , O_WRONLY ");
     if ((mode & O_RDWR) != 0)
-        strcat(flagOpen, "O_RDWR ");
+        strcat(name, " , O_RDWR ");
     if ((mode & O_APPEND) != 0)
-        strcat(flagOpen, "O_APPEND ");
+        strcat(name, " , O_APPEND ");
     if ((mode & O_TRUNC) != 0)
-        strcat(flagOpen, "O_TRUNC ");
-
-    if(sprintf(name , "descriptor: %d -> %s , %s \n" , df , nombre , flagOpen) < 0)
-        perror("error");
+        strcat(name, " , O_TRUNC ");
+    strcat(name , "\n");
     add_to_list(listOpen , name , df);
-
+    free(name);
 }
 
 void infosys (){
@@ -275,7 +288,8 @@ void help (char opciones[]){
 
     if (opciones == NULL){
         printf("Avaliable commands: \nauthors [-l|-n] , pid [-p] , chdir [dir] , date , time \nhist [-c|-N] , command N , open [file] mode , "
-               "close [df] \ndup [df] , listOpenFiles , infosys , help [cmd] , quit , exit , bye.\n");
+               "close [df] \ndup [df] , listopen , infosys , create [-f] [name] , list [-reca] [-recb] [-hid][-long][-link][-acc] n1 n2 .. ,\n"
+               " stat [-long][-link][-acc] name1 name2 .. , delete [name1 name2 ..] , deltree [name1 name2 ..] , help [cmd] , quit , exit , bye.\n");
     }else if(strcmp(opciones , "authors") == 0){
         printf("Prints the names and logins of the program authors. authors -l prints\n"
                "only the logins and authors -n prints only the names\n");
@@ -311,7 +325,7 @@ void help (char opciones[]){
     }else if(strcmp(opciones , "dup") == 0){
         printf("Duplicates the df file descriptor (using the dup system call, creating the\n"
                "corresponding new entry on the file list\n");
-    }else if(strcmp(opciones , "listOpenFiles") == 0){
+    }else if(strcmp(opciones , "listopen") == 0){
         printf("Lists the shell open files. For each file it lists its descriptor, the file\n"
                "name and the opening mode. \n");
     }else if(strcmp(opciones , "infosys") == 0){
@@ -320,6 +334,23 @@ void help (char opciones[]){
     }else if(strcmp(opciones , "help") == 0){
         printf("help displays a list of available commands. help cmd gives a brief help\n"
                "on the usage of command cmd\n");
+    }else if(strcmp(opciones , "create") == 0){
+        printf("creates files (-f) or directories\n");
+    }else if(strcmp(opciones , "stat") == 0){
+        printf("gives information on files or directories\n"
+               "\t-long: listado largo\n"
+               "\t-acc: acesstime\n"
+               "\t-link: si es enlace simbolico, el path contenido\n");
+    }else if(strcmp(opciones , "list") == 0){
+        printf("lists directories contents \n"
+               "\t-hid: incluye los ficheros ocultos\n"
+               "\t-recb: recursivo (antes)\n"
+               "\t-reca: recursivo (despues)\n"
+               "\tresto parametros como stat\n");
+    }else if(strcmp(opciones , "delete") == 0){
+        printf("deletes files and/or empty directories\n");
+    }else if(strcmp(opciones , "deltree") == 0){
+        printf("deletes files and/pr non empty directories recursively\n");
     }else if(strcmp(opciones , "quit") == 0 || strcmp(opciones , "bye") == 0 || strcmp(opciones , "exit") == 0){
         printf("Ends the shell\n");
     }else
@@ -337,6 +368,7 @@ void meterDatos(const int* num , char *tr[], tList *hist){
         }else break;
     }
     add_to_list(hist , commName , *num);
+    free(commName);
 }
 
 void closeShell (bool *fin){
@@ -401,7 +433,6 @@ void procesarEntrada(char c[] , bool *fin , tList *histComm , tList *listOpen){
 
     char *tr[MAX_TOTAL_COMMAND];
 
-
     static int num = 0;
     static int *commNum = &num;
 
@@ -422,7 +453,6 @@ void procesarEntrada(char c[] , bool *fin , tList *histComm , tList *listOpen){
 }
 
 char LetraTF (mode_t m){
-
     switch (m&S_IFMT) { /*and bit a bit con los bits de formato,0170000 */
         case S_IFSOCK: return 's'; /*socket */
         case S_IFLNK: return 'l'; /*symbolic link*/

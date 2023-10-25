@@ -10,12 +10,17 @@ tList* create_list(){
     return new_list;
 }
 
+void free_node_data(void* data){
+    free(data);
+}
+
 void add_to_list(tList* list , void* data , int id){
-    tNode *copia;
-    tNode* new_node = (tNode*) malloc(sizeof(tNode));
-    new_node->data = data;
+    tNode* new_node = (tNode*) malloc(sizeof(tNode*));
+    new_node->data = malloc(sizeof (char*[15]));
+    memcpy(new_node->data , data , sizeof (char*[15]));
     new_node->next = NULL;
     new_node->dfORCommNUm = id;
+    tNode* copia;
     if(isEmpty(*list)){
         list->head = new_node;
         list->size++;
@@ -34,18 +39,23 @@ void* printList(tList list, void (*fptr)(void *)){
         (*fptr)(list.head->data);
         list.head = list.head->next;
     }
+    return NULL;
 }
+
 void printStrings(void *n){
     printf(" %s\n", (char*)n);
 }
 
 void free_list(tList* list){
-    tNode* current_node = list->head;
-    while (current_node != NULL){
-        tNode* next_node = current_node->next;
-        free(current_node->data);
-        free(current_node);
-        current_node = next_node;
+    if (list->head != NULL) {
+        tNode *node = list->head;
+        while (node != NULL){
+            list->head = node->next;
+            free_node_data(node->data);
+            free(node);
+            list->size--;
+            node = list->head;
+        }
     }
     free(list);
 }
@@ -88,7 +98,7 @@ tPos previous(tPos P , tList list){
 }
 
 tPos last(tList list){
-    for ( list; list.head->next != NULL ; list.head = list.head->next);
+    for (; list.head->next != NULL ; list.head = list.head->next);
     return list.head;
 }
 
@@ -96,18 +106,19 @@ tPos last(tList list){
 tPos findCommORdf(tList list , void* data){
     tPos aux;
     tPos prim = first(list);
-    for( ; list.head != NULL ; list.head = prim){
+    for(; list.head != NULL ; list.head = prim){
         prim = next(prim , list);
         if(list.head->dfORCommNUm == (long)data){
             aux = list.head;
             return aux;
             }
         }
+    return NULL;
     }
 
 tNode getNode(tList list , tPos P){//preCD no vacia
     tPos prim = first(list);
-    for ( list ; list.head != P ; list.head = prim ) {
+    for (; list.head != P ; list.head = prim ) {
         prim = next(prim , list);
     }
     tNode sol = *list.head;
