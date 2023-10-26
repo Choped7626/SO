@@ -727,17 +727,24 @@ void list(char* tr[]){
 
             if(use_reca == 1){
                 char pathInicial[PATH_MAX];
-                getcwd(pathInicial , sizeof (pathInicial));
-                strcat(pathInicial , "/");
-                strcat(pathInicial , tr[pos]);
+                if(strchr(tr[pos] , '/') == NULL){
+                    getcwd(pathInicial , sizeof (pathInicial));
+                    strcat(pathInicial , "/");
+                    strcat(pathInicial , tr[pos]);
+
+                }else
+                    strcpy(pathInicial , tr[pos]);
                 reca(cnt , llamadaAux , use_hid , pathInicial);
                 chdir(cwd);
             }
             if (use_recb == 1){
                 char pathInicial2[PATH_MAX];
-                getcwd(pathInicial2 , sizeof (pathInicial2));
-                strcat(pathInicial2 , "/");
-                strcat(pathInicial2 , tr[pos]);
+                if(strchr(tr[pos] , '/') == NULL){
+                    getcwd(pathInicial2 , sizeof (pathInicial2));
+                    strcat(pathInicial2 , "/");
+                    strcat(pathInicial2 , tr[pos]);
+                }else
+                    strcpy(pathInicial2 , tr[pos]);
                 recb(cnt , llamadaAux , use_hid , pathInicial2);
                 chdir(cwd);
             }
