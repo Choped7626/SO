@@ -28,8 +28,6 @@ int main(){
         fgets(commando , MAX_TOTAL_COMMAND , stdin);
         procesarEntrada(commando , fin , histComm , listOpen);
     }
-
     free_list(histComm);
     free_list(listOpen);
-
 }

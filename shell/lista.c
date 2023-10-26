@@ -129,25 +129,24 @@ bool remove_from_list(tList* list , tPos P){
     if (list->size == 0) {
         return false;
     }
-    tNode *tmp;
     if(P == first(*list)){
-        tmp = list->head;
         list->head = list->head->next;
-        free(tmp);
+        free(P->data);
+        free(P);
         list->size--;
         return true;
     }else if (P == last(*list)){
-        tPos ult = last(*list);
         tPos prev = previous(P , *list);
         prev->next = NULL;
-        free(ult);
+        free(P->data);
+        free(P);
         list->size--;
         return true;
     }else{
         tPos prev = previous(P , *list);
-        tmp = prev->next;
-        prev->next = tmp->next;
-        free(tmp);
+        prev->next = P->next;
+        free(P->data);
+        free(P);
         list->size--;
         return true;
     }

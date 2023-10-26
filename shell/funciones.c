@@ -97,7 +97,7 @@ void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* rec
     tNode I;
 
     if(*recursividad == 5){ //Comprobación de recursividad infinita
-        printf("error de recursividad infinita\n");
+        perror("error de recursividad infinita\n");
         return;
     }
 
@@ -125,6 +125,7 @@ void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* rec
             }
         }
         whichCommand(tr ,  histComm , commNum , fin , recursividad , listOpen);
+        free(cadenaH);
     }
 }
 
@@ -194,8 +195,9 @@ void deleteOpenFiles(int df, tList *listOpen){
 }
 
 void dupSO (char *tr[] , tList *listOpen){
-
-    int df = (int)strtol(tr[1] , NULL , 10), duplicado;
+    int df , duplicado;
+    if(tr[1] != NULL)
+        df = (int)strtol(tr[1] , NULL , 10);
     char aux[MAX_NAME_LENGTH];
     char *p = malloc(sizeof (char *[MAX_TOTAL_COMMAND])) ;
 
@@ -203,6 +205,7 @@ void dupSO (char *tr[] , tList *listOpen){
 
     if (tr[1]==NULL || df < 0 || df > last(*listOpen)->dfORCommNUm) { /*no hay parametro*/
         listOpenFiles(listOpen);                /*o el descriptor es menor que 0*/
+        free(p);
         return;
     }
 
@@ -213,15 +216,16 @@ void dupSO (char *tr[] , tList *listOpen){
     char *cadenaT[MAX_TOTAL_COMMAND];
 
     int num = TrozearCadena(p , cadenaT);
-    free(p);
 
     if(num < 0){
         perror("No se pudo duplicar el archivo\n");
+        free(p);
         return;
     }
-    sprintf (aux,"dup %d (%s)",df, cadenaT[3]);
+    snprintf (aux, sizeof(char[MAX_NAME_LENGTH]),"dup %d (%s)",df, cadenaT[3]);
     insertOpenFiles(duplicado , aux , listOpen , fcntl(duplicado , F_GETFL));
     printf("Añadida entrada a la tabla de ficheros abiertos\n");
+    free(p);
 }
 
 void listOpenFiles (tList *listOpen){  //recorremos la lista e imprimimos su contenido
@@ -241,7 +245,7 @@ void insertOpenFiles(int df , const char *nombre , tList *listOpen , int mode){
 ///
     char* name = malloc(sizeof (char*[23]));
 
-    if(sprintf(name , "descriptor: %d -> %s" , df , nombre) < 0){
+    if(snprintf(name , sizeof(char*[23]) , "descriptor: %d -> %s" , df , nombre) < 0){
         perror("no se pudo  insertar el archivo en la lista de archivos abiertos\n");
         return;
     }
@@ -360,7 +364,7 @@ void help (char opciones[]){
 void meterDatos(const int* num , char *tr[], tList *hist){
     ///
     char *commName = malloc(sizeof(char*[MAX_TOTAL_COMMAND]));          //SIGABRT se fas unha chamada a un comando q ten caracteres de mais e xusto despois fas un hist
-    sprintf(commName , "%d , " , *num );
+    snprintf(commName , sizeof(char*[MAX_TOTAL_COMMAND]), "%d , " , *num );
     for (int i = 0; i < MAX_TOTAL_COMMAND ; ++i) {
         if(tr[i] != NULL){
             strcat(commName, tr[i]);
@@ -501,6 +505,7 @@ void create(char* tr[]){
         if (fl == NULL)
             perror("Imposible crear el fichero");
         chmod(tr[2] , m);
+        fclose(fl);
     }else{
         df = mkdir(tr[1] , 0777);
         if(df == -1){
@@ -592,7 +597,8 @@ void reca(int cnt , char* llamadaAux[] , int use_hid , char* pathInicial){
     struct dirent *dp;
     struct dirent *aux;
     char path[1000];
-
+    struct stat esFile;
+    int bin = stat(pathInicial , &esFile);
     DIR* d = opendir(pathInicial);
 
     if (!d)
@@ -602,14 +608,14 @@ void reca(int cnt , char* llamadaAux[] , int use_hid , char* pathInicial){
     while ((aux = readdir(d)) != NULL){
         if (use_hid == 1) {
             llamadaAux[cnt] = aux->d_name;
-            chdir(pathInicial);
+            if (bin == 0 && S_ISDIR(esFile.st_mode))
+                chdir(pathInicial);
             statSO(llamadaAux);
-            chdir(path);
         } else if (aux->d_name[0] != '.') {
             llamadaAux[cnt] = aux->d_name;
-            chdir(pathInicial);
+            if (bin == 0 && S_ISDIR(esFile.st_mode))
+                chdir(pathInicial);
             statSO(llamadaAux);
-            chdir(path);
         }
     }
 
@@ -637,6 +643,8 @@ void recb(int cnt , char* llamadaAux[] , int use_hid , char* pathInicial){
     struct dirent *dp;
     struct dirent *aux;
     char path[1000];
+    struct stat esFile;
+    int bin = stat(pathInicial , &esFile);
 
     DIR* c = opendir(pathInicial);
     if (!c)
@@ -663,17 +671,18 @@ void recb(int cnt , char* llamadaAux[] , int use_hid , char* pathInicial){
     while ((aux = readdir(d)) != NULL){
         if (use_hid == 1) {
             llamadaAux[cnt] = aux->d_name;
-            chdir(pathInicial);
+            llamadaAux[cnt + 1] = NULL;
+            if (bin == 0 && S_ISDIR(esFile.st_mode))
+                chdir(pathInicial);
             statSO(llamadaAux);
-            chdir(path);
         } else if (aux->d_name[0] != '.') {
             llamadaAux[cnt] = aux->d_name;
-            chdir(pathInicial);
+            llamadaAux[cnt + 1] = NULL;
+            if (bin == 0 && S_ISDIR(esFile.st_mode))
+                chdir(pathInicial);
             statSO(llamadaAux);
-            chdir(path);
         }
     }
-
     closedir(d);
     closedir(c);
 }
@@ -681,7 +690,9 @@ void recb(int cnt , char* llamadaAux[] , int use_hid , char* pathInicial){
 void list(char* tr[]){
 
     char* llamadaAux[MAX_TOTAL_COMMAND];
-    llamadaAux[0] = NULL;
+    for (int i = 0; i < MAX_TOTAL_COMMAND; ++i) {
+        llamadaAux[i] = NULL;
+    }
 
     int pos = 0 , i = 1 , cnt = 1 , use_hid = 0 , use_reca = 0 , use_recb = 0;
 
@@ -726,6 +737,7 @@ void list(char* tr[]){
             struct dirent *dp;
 
             if(use_reca == 1){
+                printf(" ________________________Using reca________________________ \n");
                 char pathInicial[PATH_MAX];
                 if(strchr(tr[pos] , '/') == NULL){
                     getcwd(pathInicial , sizeof (pathInicial));
@@ -738,6 +750,7 @@ void list(char* tr[]){
                 chdir(cwd);
             }
             if (use_recb == 1){
+                printf(" ________________________Using recb________________________ \n");
                 char pathInicial2[PATH_MAX];
                 if(strchr(tr[pos] , '/') == NULL){
                     getcwd(pathInicial2 , sizeof (pathInicial2));
