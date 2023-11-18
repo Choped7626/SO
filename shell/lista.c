@@ -14,7 +14,7 @@ void free_node_data(void* data){
     free(data);
 }
 
-void add_to_list(tList* list , void* data , int id){
+void add_to_list(tList* list , void* data , long id){
     tNode *new_node = malloc(sizeof(struct tNode));
     new_node->data = malloc(sizeof (char*[15]));
     memcpy(new_node->data , data , sizeof (char*[15]));

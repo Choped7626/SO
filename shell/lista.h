@@ -22,7 +22,7 @@ typedef struct list{
 
 tList* create_list();
 
-void add_to_list(tList* list , void* data , int id);
+void add_to_list(tList* list , void* data , long id);
 
 bool remove_from_list(tList* list , tPos P);
 

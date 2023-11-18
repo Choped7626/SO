@@ -2,6 +2,12 @@
 Nombre: Daniel Puñal Diaz       Login:  daniel.punal.diaz@udc.es    Grupo:3.2
 Nombre: Mario Lamas Angeriz     Login: m.lamasa@udc.es              Grupo:3.2
 */
+/*
+ * cambios q estarian chingones:
+ *
+ * hacer dup de un archivo q se use pero no este en listopen(dup 3 usando valgrind)
+ * ser mais preciso a hora de elegir as flags dos 3 archvios abertos , detectalas de algunha forma porq stderr a veces e solo W
+*/
 #include "cabeceras.h"
 
 void authors(char opciones[]){
@@ -19,7 +25,7 @@ void authors(char opciones[]){
         printf("Nombres: \t Mario Lamas Angeriz \t Daniel Puñal Diaz\n");
 
     }else
-        perror("Opcion Inexistente");
+        printf("Opcion Inexistente");
 }
 
 void pid (char opciones[]){
@@ -33,7 +39,7 @@ void pid (char opciones[]){
         printf("father pid: %d\n", getppid());
 
     }else
-        perror("Opcion Inexistente");
+        printf("Opcion Inexistente");
 }
 
 void chdirSO (char opciones[]){
@@ -73,12 +79,10 @@ void hist (char opciones[] , tList* histCom , int* commNum){
         printList(*histCom , printStrings);
 
     } else if(strcmp(opciones , "-c") == 0){
-///borrar pero no eliminar
         delete_list(histCom);
         *commNum = 0;
-
     }else if(strtol(opciones , NULL , 10) >= 1 && strtol(opciones , NULL , 10) <= histCom->size){
-///
+
         tList copy;
         copy = *histCom;
         tPos fin = findCommORdf(*histCom , (void*)(long)strtol(opciones , NULL , 10));
@@ -87,29 +91,29 @@ void hist (char opciones[] , tList* histCom , int* commNum){
                 copy.head = copy.head->next;
         }
     }else{
-        perror("Opcion Inexistente");
+        printf("Opcion Inexistente");
     }
 }
 
-void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* recursividad , tList *listOpen){
+void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* recursividad , tList *listOpen , tList *listmalloc){
 
     tPos p;
     tNode I;
 
     if(*recursividad == 5){ //Comprobación de recursividad infinita
-        perror("error de recursividad infinita\n");
+        printf("error de recursividad infinita\n");
         return;
     }
 
     if(tr[1] == NULL || (int)strtol(tr[1] , NULL , 10) >= *commNum || (int)strtol(tr[1] , NULL , 10) <= 0){
 
-        perror("Número de comando no válido");
+        printf("Número de comando no válido");
 
     }else{
 
         p = findCommORdf(*histComm , (void*)(long)strtol(tr[1] , NULL , 10));
         I = getNode(*histComm , p);
-        recursividad++;
+        (*recursividad)++;
 
         char* cadenaH = strdup(I.data);// Duplicamos la cadena para no modificar la original
         int pala = TrozearCadena(cadenaH , tr);  //Didimos la cadena en trozos
@@ -124,7 +128,7 @@ void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* rec
                 break;
             }
         }
-        whichCommand(tr ,  histComm , commNum , fin , recursividad , listOpen);
+        whichCommand(tr ,  histComm , commNum , fin , recursividad , listOpen , listmalloc);
         free(cadenaH);
     }
 }
@@ -164,8 +168,6 @@ void openSO (char *tr[] , tList *listOpen) {
         insertOpenFiles(df, tr[1], listOpen, mode);
         printf("Añadida entrada a la tabla de ficheros abiertos\n");
     }
-
-
 }
 
 void closeSO (char *tr[] , tList *listOpen){
@@ -183,11 +185,11 @@ void closeSO (char *tr[] , tList *listOpen){
 
 void deleteOpenFiles(int df, tList *listOpen){
 
-    ///
+
     tPos fich;
     fich = findCommORdf(*listOpen , (void*)(long)df);
     if (fich == NULL){
-        perror("df inexistente\n");
+        printf("df inexistente\n");
     } else{
         remove_from_list(listOpen, fich);
         listOpenFiles(listOpen);
@@ -210,7 +212,7 @@ void dupSO (char *tr[] , tList *listOpen){
     }
 
     duplicado = dup(df);
-    ///
+
     tPos p1 = findCommORdf(*listOpen , (void*)(long)df);
     strcpy(p , p1->data);
     char *cadenaT[MAX_TOTAL_COMMAND];
@@ -231,10 +233,9 @@ void dupSO (char *tr[] , tList *listOpen){
 void listOpenFiles (tList *listOpen){  //recorremos la lista e imprimimos su contenido
 
     if (isEmpty(*listOpen)){
-        perror("Esta vacia\n");
+        printf("Esta vacia\n");
     }
     else {
-        ///
         printList(*listOpen , printStrings);
     }
 
@@ -242,7 +243,7 @@ void listOpenFiles (tList *listOpen){  //recorremos la lista e imprimimos su con
 
 
 void insertOpenFiles(int df , const char *nombre , tList *listOpen , int mode){
-///
+
     char* name = malloc(sizeof (char*[23]));
 
     if(snprintf(name , sizeof(char*[23]) , "descriptor: %d -> %s" , df , nombre) < 0){
@@ -291,55 +292,53 @@ void infosys (){
 void help (char opciones[]){
 
     if (opciones == NULL){
-        printf("Avaliable commands: \nauthors [-l|-n] , pid [-p] , chdir [dir] , date , time \nhist [-c|-N] , command N , open [file] mode , "
-               "close [df] \ndup [df] , listopen , infosys , create [-f] [name] , list [-reca] [-recb] [-hid][-long][-link][-acc] n1 n2 .. ,\n"
-               " stat [-long][-link][-acc] name1 name2 .. , delete [name1 name2 ..] , deltree [name1 name2 ..] , help [cmd] , quit , exit , bye.\n");
+        printf("Avaliable commands: \n authors [-l|-n] \n pid [-p] \n chdir [dir] \n date \n time \n hist [-c|-N] \n command N \n open [file] mode \n "
+               "close [df] \n dup [df] \n listopen \n infosys \n create [-f] [name] \n list [-reca] [-recb] [-hid][-long][-link][-acc] n1 n2 .. \n"
+               " stat [-long][-link][-acc] name1 name2 .. \n delete [name1 name2 ..] \n deltree [name1 name2 ..] \n help [cmd] \n quit \n exit \n bye \n");
     }else if(strcmp(opciones , "authors") == 0){
-        printf("Prints the names and logins of the program authors. authors -l prints\n"
-               "only the logins and authors -n prints only the names\n");
+        printf("Prints the names and logins of the program authors. \n authors -l prints"
+               "only the logins \n authors -n prints only the names\n");
     }else if(strcmp(opciones , "pid") == 0){
-        printf("Prints the pid of the process executing the shell. pid -p rints the pid\n"
+        printf("Prints the pid of the process executing the shell. \n pid -p rints the pid"
                "of the shell’s parent process.\n");
     }else if(strcmp(opciones , "chdir") == 0){
         printf("Changes the current working directory of the shell to dir.\n"
-               "When invoked without auguments it prints the\n"
+               "When invoked without auguments it prints the"
                "current working directory \n");
     }else if(strcmp(opciones , "date") == 0){
         printf("Prints the current date in the format DD/MM/YYYY\n");
     }else if(strcmp(opciones , "time") == 0){
         printf("Prints the current time in the format hh:mm:ss.\n");
     }else if(strcmp(opciones , "hist") == 0){
-        printf("Shows/clears the historic of commands executed by this shell. In order\n"
-               "to do this, a list to store all the commands input to the shell must be\n"
-               "implemented. hist -c clears the historic, that’s to say, empties the list\n"
-               "– hist Prints all the commands that have been input with their order\n"
-               "number\n"
+        printf("Shows/clears the historic of commands executed by this shell.\n"
+               "hist -c clears the historic, that’s to say, empties the list\n"
+               "– hist Prints all the commands that have been input with their order number\n"
                "– hist -c Clears (empties) the list of historic commands\n"
                "– hist -N Prints the first N commands\n");
     }else if(strcmp(opciones , "command") == 0){
         printf("Repeats command number N (from historic list)\n");
     }else if(strcmp(opciones , "open") == 0){
-        printf("Opens a file and adds it (together with the file descriptor and the\n"
-               "opening mode to the list of shell open files. For the mode we’ll use cr for\n"
-               "O_CREAT, ap for O_APPEND, ex for O_EXCL, ro for O_RDONLY,\n"
+        printf("Opens a file and adds it (together with the file descriptor and the "
+               "opening mode to the list of shell open files. \n For the mode we’ll use cr for"
+               "O_CREAT, ap for O_APPEND, ex for O_EXCL, ro for O_RDONLY, "
                "rw for O_RDWR, wo for O_WRONLY and tr for O_TRUNC. \n");
     }else if(strcmp(opciones , "close") == 0){
-        printf("Closes the df file descriptor and eliminates the corresponding item from\n"
+        printf("Closes the df file descriptor and eliminates the corresponding item from "
                "the list\n");
     }else if(strcmp(opciones , "dup") == 0){
-        printf("Duplicates the df file descriptor (using the dup system call, creating the\n"
+        printf("Duplicates the df file descriptor (using the dup system call, creating the "
                "corresponding new entry on the file list\n");
     }else if(strcmp(opciones , "listopen") == 0){
-        printf("Lists the shell open files. For each file it lists its descriptor, the file\n"
+        printf("Lists the shell open files. For each file it lists its descriptor, the file "
                "name and the opening mode. \n");
     }else if(strcmp(opciones , "infosys") == 0){
-        printf("Prints information on the machine running the shell (as obtained via\n"
+        printf("Prints information on the machine running the shell (as obtained via "
                "the uname system call/library function)\n");
     }else if(strcmp(opciones , "help") == 0){
-        printf("help displays a list of available commands. help cmd gives a brief help\n"
+        printf("help displays a list of available commands. help cmd gives a brief help "
                "on the usage of command cmd\n");
     }else if(strcmp(opciones , "create") == 0){
-        printf("creates files (-f) or directories\n");
+        printf("creates files \n (-f) or directories\n");
     }else if(strcmp(opciones , "stat") == 0){
         printf("gives information on files or directories\n"
                "\t-long: listado largo\n"
@@ -358,11 +357,11 @@ void help (char opciones[]){
     }else if(strcmp(opciones , "quit") == 0 || strcmp(opciones , "bye") == 0 || strcmp(opciones , "exit") == 0){
         printf("Ends the shell\n");
     }else
-        perror("Comando Inexistente");
+        printf("Comando Inexistente");
 }
 
 void meterDatos(const int* num , char *tr[], tList *hist){
-    ///
+
     char *commName = malloc(sizeof(char*[MAX_TOTAL_COMMAND]));          //SIGABRT se fas unha chamada a un comando q ten caracteres de mais e xusto despois fas un hist
     snprintf(commName , sizeof(char*[MAX_TOTAL_COMMAND]), "%d , " , *num );
     for (int i = 0; i < MAX_TOTAL_COMMAND ; ++i) {
@@ -379,7 +378,7 @@ void closeShell (bool *fin){
     *fin = true;
 }
 
-void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* recursividad , tList *listOpen){
+void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* recursividad , tList *listOpen , tList *listmalloc){
 
     if(strcmp(tr[0] , "authors") == 0)
         authors(tr[1]);
@@ -394,7 +393,7 @@ void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* 
     else if(strcmp(tr[0] , "hist") == 0)
         hist(tr[1] , histComm , commNum);
     else if(strcmp(tr[0] , "command") == 0)
-        command(tr , histComm , commNum , fin , recursividad , listOpen);
+        command(tr , histComm , commNum , fin , recursividad , listOpen , listmalloc);
     else if(strcmp(tr[0] , "open") == 0)
         openSO(tr , listOpen);
     else if(strcmp(tr[0] , "close") == 0)
@@ -417,10 +416,12 @@ void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* 
         deltree(tr);
     else if (strcmp(tr[0], "help") == 0)
         help(tr[1]);
+    else if (strcmp(tr[0] , "malloc") == 0)
+        mallocSO(tr , listmalloc);
     else if ((strcmp(tr[0], "quit") == 0) || (strcmp(tr[0], "exit") == 0) || (strcmp(tr[0], "bye") == 0))
         closeShell(fin);
     else
-        perror("Comando inexistente\n");
+        printf("Comando inexistente\n");
 }
 
 int TrozearCadena(char* cadena , char* tr[]){
@@ -433,7 +434,7 @@ int TrozearCadena(char* cadena , char* tr[]){
     return i;
 }
 
-void procesarEntrada(char c[] , bool *fin , tList *histComm , tList *listOpen){
+void procesarEntrada(char c[] , bool *fin , tList *histComm , tList *listOpen , tList *listmalloc){
 
     char *tr[MAX_TOTAL_COMMAND];
 
@@ -447,13 +448,13 @@ void procesarEntrada(char c[] , bool *fin , tList *histComm , tList *listOpen){
     if(palabras != 0 && palabras != -1){
         num++;
         meterDatos(commNum , tr , histComm);
-        whichCommand(tr , histComm , commNum , fin , recursividad , listOpen);
+        whichCommand(tr , histComm , commNum , fin , recursividad , listOpen , listmalloc);
     }else
         if(palabras == -1){                                         //SI CADENA DEMASIADO LARGA COLLEA VARIAS VECES , PURGAR STDIN?
-            perror("Cadena demasiado grande");
+            printf("Cadena demasiado grande");
 
         }else
-            perror("Cadena Vacia");
+            printf("Cadena Vacia");
 }
 
 char LetraTF (mode_t m){
@@ -499,11 +500,17 @@ void create(char* tr[]){
     m = 0775;
 
     if (tr[1] == NULL) { /*no hay paramentro*/
-        perror("Imposible crear el fichero");
+        printf("Imposible crear el fichero");
     }else if(strcmp(tr[1] , "-f") == 0) {
-        fl = fopen(tr[2] , "w");
-        if (fl == NULL)
+        if(access(tr[2], F_OK) == 0){
+            printf("El fichero ya existe\n");
+            return;
+        }
+        fl = fopen(tr[2], "w");
+        if (fl == NULL){
             perror("Imposible crear el fichero");
+            return;
+        }
         chmod(tr[2] , m);
         fclose(fl);
     }else{
@@ -583,8 +590,7 @@ void statSO(char* tr[]){
         }
 
         }else{
-            printf("error al accder a %s\n" , tr[name]);
-            perror("\n");
+            printf("error al accder a %s : %s\n" , tr[name] , strerror(errno));
         }
     }
     if(tr[i] == NULL){
@@ -764,7 +770,7 @@ void list(char* tr[]){
 
             if(use_reca == 0 && use_recb == 0 ) {
                 printf("**********%s\n" , tr[pos]);
-                while ((dp = readdir(d))!= NULL){///optimizar
+                while ((dp = readdir(d))!= NULL){
                     if (use_hid == 1) {
                         llamadaAux[cnt] = dp->d_name;
                         chdir(tr[pos]);
@@ -781,7 +787,7 @@ void list(char* tr[]){
             closedir(d);
         }else{
             llamadaAux[cnt] = tr[pos];
-            statSO(llamadaAux);///optimizar,cada archivo chama a stat solo con ese archivo
+            statSO(llamadaAux);
         }
     }
     if(tr[i] == NULL){
@@ -792,7 +798,7 @@ void list(char* tr[]){
 void delete(char* tr[]){
 
     if (access(tr[1], F_OK) == 0) {  //Comprobamos que existe el archivo o el directorio
-        (rmdir(tr[1]) == 0 || unlink(tr[1]) == 0) ? printf("Borrado de %s Completado\n" , tr[1]) : perror("ERROR\n");
+        (rmdir(tr[1]) == 0 || unlink(tr[1]) == 0) ? printf("Borrado de %s Completado\n" , tr[1]) : perror("Error al borrar\n");
     }
     else {
         perror("ERROR. El directorio o el archivo no existen\n"); //Si el archivo o el directorio no existe, se lanzara error
@@ -800,11 +806,12 @@ void delete(char* tr[]){
 }
 
 void deltree(char* tr[]) {
+
     struct dirent* enter;  //para esto usamos dirent.h
     DIR* directory = opendir(tr[1]);  //abrimos el directorio y los guardamos en un puntero
 
     if(!directory) {
-        perror("ERROR\n");  //Lanzamos error si no se puede abrir el directorio
+        delete(tr);
         return;
     }
     while((enter = readdir(directory))) {  //Recorremos el directorio
@@ -820,9 +827,35 @@ void deltree(char* tr[]) {
             (S_ISDIR(info.st_mode)) ? deltree(subtr) : delete(subtr);
         //Si es un directorio, llamamos a deltree para borrar su contenido
         //Si es un archivo, llamamos a delete para eliminarlo
-
     }
     closedir(directory);  //cerramos el directorio actual
     delete(tr);  //borramos el contenido
 }
 
+void mallocSO(char* tr[] , tList *listmalloc){
+    unsigned int* mallocPointer;
+    if(tr[1] != NULL){
+        if(strcmp(tr[1] , "-free") == 0 && tr[2] != NULL){
+
+        }else if (atoi(tr[1]) != 0){
+            long tam = strtol(tr[1] , NULL , 10);
+            errno = 0;
+            mallocPointer = malloc(tam);
+            if(errno != 0){
+                perror("Fallo al usar el malloc");
+                return;
+            }
+            char* meter = malloc(sizeof(char*[MAX_NAME_LENGTH]));
+            time_t t = time(NULL);
+            struct tm *tm = localtime(&t);
+            char hora[100];
+            strftime(hora, 100, "%m %d %H:%M", tm);
+            snprintf(meter , sizeof(char*[MAX_NAME_LENGTH]) , "%10p %20ld %15s %7s", mallocPointer , tam , hora , "malloc"  );
+            add_to_list(listmalloc , meter , tam);
+            free(meter);
+        }
+    }else{
+        printf("******Lista de bloques asignados malloc para el proceso %d\n" , getpid());
+        printList(*listmalloc , printStrings);//crear funcion para imprimir bloques de memoria?(cambiar printStrings)
+    }
+}
