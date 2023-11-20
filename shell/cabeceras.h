@@ -31,4 +31,5 @@ void delete(char* tr[]);
 void deltree(char* tr[]);
 void mallocSO(char* tr[] , tList *listmalloc);
 void shared(char* tr[] , tList *listBlocks);
+void mmapSO(char* tr[] , tList *listBlocks);
 #endif //SO_P0_CABECERAS_H

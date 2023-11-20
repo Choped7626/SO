@@ -17,6 +17,7 @@
 #include <dirent.h>
 #include <pwd.h>
 #include <grp.h>
+#include <sys/mman.h>
 #define MAX_TOTAL_COMMAND 100
 
 typedef struct bloquesMem{
@@ -25,6 +26,7 @@ typedef struct bloquesMem{
     char timeAlloc[MAX_NAME_LENGTH];///
     char* typeOfAlloc;
     char other[MAX_NAME_LENGTH];
+    char fileName[MAX_NAME_LENGTH];
 }bloque;
 
 typedef struct tNode* tPos;

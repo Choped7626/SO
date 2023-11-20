@@ -419,6 +419,8 @@ void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* 
         mallocSO(tr , listBlocks);
     else if (strcmp(tr[0] , "shared") == 0)
         shared(tr , listBlocks);
+    else if (strcmp(tr[0] , "mmap") == 0)
+        mmapSO(tr , listBlocks);
     else if ((strcmp(tr[0], "quit") == 0) || (strcmp(tr[0], "exit") == 0) || (strcmp(tr[0], "bye") == 0))
         closeShell(fin);
     else
@@ -872,6 +874,7 @@ void mallocSO(char* tr[] , tList *listBlocks){
             snprintf((char *) bloque1->timeAlloc, sizeof(char[MAX_NAME_LENGTH]) , "%s" , hora);
             bloque1->typeOfAlloc = "malloc";
             bloque1->other[0] = '\0';
+            snprintf(bloque1->fileName, sizeof(char[MAX_NAME_LENGTH]) , "");
             add_Struct_to_list(listBlocks , bloque1 , tam);//metemos tamaño en numero de orden de lista para poder usar finditem
             printf("Asignados %ld bytes en %p\n" , tam , bloque1->address);
             free(bloque1);
@@ -914,6 +917,7 @@ void * ObtenerMemoriaShmget (key_t clave, size_t tam , tList *listBlocks){
     snprintf(bloque1->timeAlloc, sizeof(char[MAX_NAME_LENGTH]) , "%s" , hora);
     bloque1->size = s.shm_segsz;
     snprintf(bloque1->other, sizeof(char[MAX_NAME_LENGTH]) , "(key %d)" , clave);
+    snprintf(bloque1->fileName, sizeof(char[MAX_NAME_LENGTH]) , "");
     add_Struct_to_list(listBlocks , bloque1 , clave);
     free(bloque1);
     return (p);
@@ -988,6 +992,7 @@ void * sinparam (key_t clave, size_t tam , tList *listBlocks){
     snprintf(bloque1->timeAlloc, sizeof(char[MAX_NAME_LENGTH]) , "%s" , hora);
     bloque1->size = s.shm_segsz;
     snprintf(bloque1->other, sizeof(char[MAX_NAME_LENGTH]) , "(key %d)" , clave);
+    snprintf(bloque1->fileName, sizeof(char[MAX_NAME_LENGTH]) , "");
     add_Struct_to_list(listBlocks , bloque1 , clave);
     free(bloque1);
     return (p);
@@ -1044,6 +1049,81 @@ void shared(char* tr[] , tList *listBlocks){//usar comando ipcs para ver como ap
     }else{
         printf("******Lista de bloques asignados shared para el proceso %d\n" , getpid());
         printListBlocks(*listBlocks , "shared" , printStructs);
+    }
+}
+
+void * MapearFichero (char * fichero, int protection , tList *listBlocks){
+    int df, map=MAP_PRIVATE,modo=O_RDONLY;
+    struct stat s;
+    void *p;
+
+    if (protection&PROT_WRITE)
+        modo=O_RDWR;
+    if (stat(fichero,&s)==-1 || (df=open(fichero, modo))==-1)
+        return NULL;
+    if ((p=mmap (NULL,s.st_size,protection,map,df,0))==MAP_FAILED)
+        return NULL;
+    bloque *bloque1 = malloc(sizeof (bloque));
+    time_t t = time(NULL);
+    struct tm *tm = localtime(&t);
+    char hora[100];
+    strftime(hora, 100, "%m %d %H:%M", tm);
+    bloque1->address = p;
+    bloque1->typeOfAlloc = "mmap";
+    snprintf(bloque1->timeAlloc, sizeof(char[MAX_NAME_LENGTH]) , "%s" , hora);
+    bloque1->size = s.st_size;
+    snprintf(bloque1->other, sizeof(char[MAX_NAME_LENGTH]) , "(descriptor %d)" , df);
+    snprintf(bloque1->fileName, sizeof(char[MAX_NAME_LENGTH]) , "%s" , fichero);
+    add_Struct_to_list(listBlocks , bloque1 , df);//descriptor para rellenar , en este caso no se usará para elegir el correcto
+    free(bloque1);
+    return p;
+}
+
+void do_AllocateMmap(char *arg[] , tList *listBlocks){
+    char *perm;
+    void *p;
+    int protection=0;
+
+    if (arg[1]==NULL)
+    {printf("******Lista de bloques asignados mmap para el proceso %d\n" , getpid());
+        printListBlocks(*listBlocks , "mmap" , printStructs); return;}
+    if ((perm=arg[2])!=NULL && strlen(perm)<4) {
+        if (strchr(perm,'r')!=NULL) protection|=PROT_READ;
+        if (strchr(perm,'w')!=NULL) protection|=PROT_WRITE;
+        if (strchr(perm,'x')!=NULL) protection|=PROT_EXEC;
+    }
+    if ((p=MapearFichero(arg[1],protection,listBlocks))==NULL)
+        perror ("Imposible mapear fichero");
+    else
+        printf ("fichero %s mapeado en %p\n", arg[1], p);
+}
+
+void mmapSO (char* tr[] , tList *listBlocks){
+    if(tr[1] != NULL){
+        if(strcmp("-free" , tr[1]) == 0){
+            if(tr[2] == NULL){
+                printf("******Lista de bloques asignados mmap para el proceso %d\n" , getpid());
+                printListBlocks(*listBlocks , "mmap" , printStructs);
+                return;
+            }
+            tPos f;
+            for(f = first(*listBlocks) ; f != NULL ; f = next(f , *listBlocks) ){
+                bloque *bloqueFree = f->data;
+                if(strcmp("mmap" , bloqueFree->typeOfAlloc) == 0){///por algun jodido motivo cambia o q hay dentro da lista
+                    if(strcmp(tr[2] , bloqueFree->fileName) == 0){
+                        munmap(bloqueFree->address , bloqueFree->size);
+                        remove_from_list(listBlocks , f);
+                        return;
+                    }
+                }
+            }
+            printf("Fichero %s no mapeado\n" , tr[2]);
+        }else{
+            do_AllocateMmap(tr , listBlocks);
+        }
+    }else{
+        printf("******Lista de bloques asignados mmap para el proceso %d\n" , getpid());
+        printListBlocks(*listBlocks , "mmap" , printStructs);
     }
 }
 
