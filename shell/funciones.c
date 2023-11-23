@@ -287,13 +287,14 @@ void infosys (){
     printf("Hardware: %s\n", uts.machine);
 }
 
-///añadir nuevos comandos
 void help (char opciones[]){
 
     if (opciones == NULL){
         printf("Avaliable commands: \n authors [-l|-n] \n pid [-p] \n chdir [dir] \n date \n time \n hist [-c|-N] \n command N \n open [file] mode \n "
                "close [df] \n dup [df] \n listopen \n infosys \n create [-f] [name] \n list [-reca] [-recb] [-hid][-long][-link][-acc] n1 n2 .. \n"
-               " stat [-long][-link][-acc] name1 name2 .. \n delete [name1 name2 ..] \n deltree [name1 name2 ..] \n help [cmd] \n quit \n exit \n bye \n");
+               " stat [-long][-link][-acc] name1 name2 .. \n delete [name1 name2 ..] \n deltree [name1 name2 ..] \n help [cmd] \n malloc [-free] \n"
+               " shared [-free|-create|-delkey] cl [tam] \n mmap [-free] fich prm \n read fich addr cont \n write [-o] fiche addr cont \n memdump addr cont \n"
+               " memfill addr cont byte \n mem [-blocks|-funcs|-vars|-all|-pmap] ..\n recurse [n]\n quit \n exit \n bye \n");
     }else if(strcmp(opciones , "authors") == 0){
         printf("Prints the names and logins of the program authors. \n authors -l prints"
                "only the logins \n authors -n prints only the names\n");
@@ -353,6 +354,34 @@ void help (char opciones[]){
         printf("deletes files and/or empty directories\n");
     }else if(strcmp(opciones , "deltree") == 0){
         printf("deletes files and/pr non empty directories recursively\n");
+    }else if(strcmp(opciones, "malloc") == 0){
+        printf("malloc [-free] [tam]    allocates a memory block of size tam with malloc \n"
+               "\t-free: deallocate a memory block of size allocated with malloc\n ");
+    }else if(strcmp(opciones, "shared") == 0){
+        printf("shared [-free|-create|-delkey] cl [tam] allocates shared memory with cl key in program \n"
+               "\t-create cl tam: allocates (creating) the shared memory block of key cl and size tam \n"
+               "\t-free cl: unmap cl key shared memory block \n"
+               "\t-delkey cl: removes from the system (without unmapping) the memory key cl\n");
+    }else if(strcmp(opciones, "mmap") == 0) {
+        printf("mmap [-free] fich prm   maps the fich file with prm permissions \n"
+               "\t-free fich: unmap the file\n");
+    }else if (strcmp(opciones, "read") == 0) {
+        printf("read fich addr cont    Read cont bytes from fich to address addr\n");
+    }else if (strcmp(opciones, "write") == 0) {
+        printf("write [-o] fiche addr cont  Write cont bytes from address addr to file (-o overwrite)\n");
+    }else if(strcmp(opciones, "memdump") == 0){
+        printf("memdump addr cont  Dumps the contents (cont bytes) of the addr memory location on screens\n");
+    }else if(strcmp(opciones, "memfill") == 0){
+        printf("memfill addr cont byte  Fill memory from addr with byte\n");
+    }else if(strcmp(opciones, "mem") == 0){
+        printf("mem [-blocks|-funcs|-vars|-all|-pmap] ..    Same shows process memory details\n"
+               "\t-blocks: the allocated memory blocks\n"
+               "\t-funcs: the addresses of the functions\n"
+               "\t-vars: the addresses of the variable\n"
+               "\t-all: everything\n"
+               "\t-pmap: show the output of the pmap command (or similar)\n");
+    }else if(strcmp(opciones, "recurse") == 0){
+        printf("recurse[n]  Call the recursive function n times\n");
     }else if(strcmp(opciones , "quit") == 0 || strcmp(opciones , "bye") == 0 || strcmp(opciones , "exit") == 0){
         printf("Ends the shell\n");
     }else
@@ -1038,21 +1067,21 @@ void shared(char* tr[] , tList *listBlocks){//usar comando ipcs para ver como ap
         if (strcmp(tr[1] , "-create") == 0 ){
             do_AllocateCreateshared(tr , listBlocks);
         }else if(strcmp(tr[1] , "-free") == 0){
-            long search = atoi(tr[2]);
-            tPos f;
-            for(f = first(*listBlocks) ; f != NULL ; f = next(f , *listBlocks) ){
-                if(f->dfORCommNUm == search){
-                    bloque *bloqueFree = f->data;
-                    if(strcmp("shared" , bloqueFree->typeOfAlloc) == 0){
-                        shmdt(bloqueFree->address);
-                        remove_from_list(listBlocks , f);
-                        return;
+            if(tr[2] != NULL){
+                long search = atoi(tr[2]);
+                tPos f;
+                for(f = first(*listBlocks) ; f != NULL ; f = next(f , *listBlocks) ){
+                    if(f->dfORCommNUm == search){
+                        bloque *bloqueFree = f->data;
+                        if(strcmp("shared" , bloqueFree->typeOfAlloc) == 0){
+                            shmdt(bloqueFree->address);
+                            remove_from_list(listBlocks , f);
+                            return;
+                        }
                     }
                 }
             }
-
             printf("No hay bloque de ese tamano asignado con shared \n");
-
         }else if(strcmp(tr[1] , "-delkey") == 0) {
             do_DeallocateDelkey(tr);
         }else{
@@ -1354,38 +1383,55 @@ void recurse(char* tr[]){
         Recursiva(itera);
     }
 }
-///work in progress  ||
-///work in progress \_/
+
 void memdump(char *tr[]) {
     int cont;
-    char elmImpr;
+    void* p;
+    unsigned char * addr;
+    unsigned char c;
+
     if(tr[1] == NULL)
         return;
+    p =(void*) strtoul( tr[1] , NULL , 16);
+    addr = (unsigned char *) p;
     if(tr[2] != NULL && atoi(tr[2]) >= 0){
         cont = atoi(tr[2]);
     }else
         cont = 25;
-    long aux = strtoul( tr[1] , NULL , 16);
-    void *addr =(void*) aux;
-    int itera = cont / 25;
-    for( ; itera > 0 ; itera--){
-        for (int i = 0; i < 25; ++i) {
-            elmImpr = (unsigned char)&addr;
-            if( elmImpr >= 0x20 && elmImpr < 0x7f) {
-                printf(" %3c ", elmImpr);
-            } else {
-                printf("\\%#03o ", elmImpr);
+    printf("Volcando %d bytes desde la direcion %p\n" , cont , p);
+    while(cont != 0){
+        if(cont >= 25){
+            for (int j = 0; j < 25 ; ++j) {
+                c = addr[j];
+                if(c >= 0x20 && c < 0x7f){
+                    printf(" %2c " , c);
+                }else{
+                    printf("\\%#02o" , c);
+                }
             }
+            printf("\n");
+            for (int j = 0; j < 25; ++j) {
+                printf(" %02X " , *addr);
+                addr += 1;
+            }
+            printf("\n");
+            cont -= 25;
+        }else{
+            for (int j = 0; j < cont ; ++j) {
+                c = addr[j];
+                if(c >= 0x20 && c < 0x7f){
+                    printf(" %2c " , c);
+                }else{
+                    printf("\\%#02o" , c);
+                }
+            }
+            printf("\n");
+            for (int j = 0; j < cont; ++j) {
+                printf(" %02X " , *addr);
+                addr += 1;
+            }
+            printf("\n");
+            cont -= cont;
         }
-        printf("\n");
-
-        for(int i = 0; i < 25; i++) {
-            aux += i;
-            addr = (void *) aux;
-            printf("%03x ", addr);
-        }
-        printf("\n");
-        cont -= 25;
-        addr += 25;
     }
 }
