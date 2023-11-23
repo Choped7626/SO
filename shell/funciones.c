@@ -421,6 +421,10 @@ void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* 
         shared(tr , listBlocks);
     else if (strcmp(tr[0] , "mmap") == 0)
         mmapSO(tr , listBlocks);
+    else if (strcmp(tr[0] , "read") == 0)
+        readSO(tr);
+    else if (strcmp(tr[0] , "write") == 0)
+        writeSO(tr);
     else if (strcmp(tr[0] , "mem") == 0)
         mem(tr , listBlocks);
     else if (strcmp(tr[0] , "memfill") == 0)
@@ -1006,7 +1010,7 @@ void * sinparam (key_t clave, size_t tam , tList *listBlocks){
     snprintf(bloque1->timeAlloc, sizeof(char[MAX_NAME_LENGTH]) , "%s" , hora);
     bloque1->size = s.shm_segsz;
     snprintf(bloque1->other, sizeof(char[MAX_NAME_LENGTH]) , "(key %d)" , clave);
-    snprintf(bloque1->fileName, sizeof(char[MAX_NAME_LENGTH]) , "");
+    snprintf(bloque1->fileName, sizeof(char[MAX_NAME_LENGTH]) , " ");
     add_Struct_to_list(listBlocks , bloque1 , clave);
     free(bloque1);
     return (p);
@@ -1014,7 +1018,7 @@ void * sinparam (key_t clave, size_t tam , tList *listBlocks){
 ///talez optimizar porq é CASI LITERALMENTE  o de arriba
 void do_Allocate (char *tr[] , tList *listBlocks){
     key_t cl;
-    size_t tam;
+    size_t tam = 0;
     void *p;
 
     if (tr[1]==NULL) {
@@ -1256,20 +1260,49 @@ void Do_pmap (void){ //sin argumentos
     waitpid (pid,NULL,0);
 }
 
-void mem(char* tr[] , tList *listBlocks){
-    if((tr[1] == NULL) || (strcmp(tr[1] , "-all") == 0)){
+int var_glob_Ini1 = 0;
+char var_glob_Ini2= 'B';
+long var_glob_Ini3 = 2;
+int var_glob_N_Ini1;
+char var_glob_N_Ini2;
+long var_glob_N_Ini3;
 
-    }else if(strcmp(tr[1] , "-blocks") == 0){
-        printALLListBlocks(*listBlocks,  printStructs);
-    }else if(strcmp(tr[1] , "-funcs") == 0){
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    }else if(strcmp(tr[1] , "-vars") == 0){
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    }else if(strcmp(tr[1] , "-pmap") == 0){
-        Do_pmap();
-    } else{
-        printf("Opcion %s no contemplada\n" , tr[1]);
+void mem(char* tr[] , tList *listBlocks){
+    int var1 = 500;
+    char var2 = 'A';
+    long var3 = 501;
+    static int stat1 = 16;
+    static char stat2 = 'Z';
+    static long stat3 = 17;
+    static int stat_N_1;
+    static char stat_N_2;
+    static long stat_N_3;
+    bool all = false;
+    if((tr[1] == NULL) || (strcmp(tr[1] , "-all") == 0)){
+        all = true;
     }
+    if(all || strcmp(tr[1] , "-vars") == 0){
+        printf("Variables locales  %p, %p, %p\n" , &var1 , &var2 , &var3);
+        printf("Variables globales %p, %p, %p\n" , &var_glob_Ini1 , &var_glob_Ini2 , &var_glob_Ini3);
+        printf("Var (N.I.)globales %p, %p, %p\n" , &var_glob_N_Ini1 , &var_glob_N_Ini2 , &var_glob_N_Ini3);
+        printf("Variables staticas %p, %p, %p\n" , &stat1 , &stat2 , &stat3);
+        printf("Var (N.I.)staticas %p, %p, %p\n" , &stat_N_1 , &stat_N_2 , &stat_N_3);
+        if(!all) return;
+    }
+    if(all || strcmp(tr[1] , "-funcs") == 0){
+        printf("Funciones programa %p, %p, %p\n" , &procesarEntrada , &printListBlocks , &whichCommand);
+        printf("Funciones libreria %p, %p, %p\n" , &printf , &getpid , &getcwd);
+        if(!all) return;
+    }
+    if(all || strcmp(tr[1] , "-blocks") == 0){
+        printALLListBlocks(*listBlocks,  printStructs);
+        return;
+    }
+    if(strcmp(tr[1] , "-pmap") == 0){
+        Do_pmap();
+        return;
+    }
+    printf("Opcion %s no contamplada\n" , tr[1]);
 }
 
 void LlenarMemoria (void *p, size_t cont, unsigned char byte){
@@ -1335,7 +1368,7 @@ void memdump(char *tr[]) {
     long aux = strtoul( tr[1] , NULL , 16);
     void *addr =(void*) aux;
     int itera = cont / 25;
-    for(itera ; itera > 0 ; itera--){
+    for( ; itera > 0 ; itera--){
         for (int i = 0; i < 25; ++i) {
             elmImpr = (unsigned char)&addr;
             if( elmImpr >= 0x20 && elmImpr < 0x7f) {

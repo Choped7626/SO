@@ -30,6 +30,19 @@ int main(){
         fgets(commando , MAX_TOTAL_COMMAND , stdin);
         procesarEntrada(commando , fin , histComm , listOpen , listmalloc);
     }
+
+    bloque *b;
+    for (tPos p = first(*listmalloc); p != NULL ; p = next(p , *listmalloc)) {
+        b = p->data;
+        if(strcmp("malloc" , b->typeOfAlloc) == 0){
+            free(b->address);
+        }else if(strcmp("shared" , b->typeOfAlloc) == 0){
+            shmdt(b->address);
+        }else if(strcmp("mmap" , b->typeOfAlloc) == 0){
+            munmap(b->address , b->size);
+        }
+        }
+
     free_list(listmalloc);
     free_list(histComm);
     free_list(listOpen);
