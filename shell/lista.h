@@ -18,7 +18,9 @@
 #include <pwd.h>
 #include <grp.h>
 #include <sys/mman.h>
+#include <sys/wait.h>
 #define MAX_TOTAL_COMMAND 100
+#define TAMANO 2048
 
 typedef struct bloquesMem{
     void* address;
@@ -57,6 +59,8 @@ bool isEmpty(tList list);
 void* printList(tList list , void (*fptr)(void *));
 
 void* printListBlocks(tList list , char* type , void (*fptr)(void *));
+
+void* printALLListBlocks(tList list, void (*fptr)(void *));
 
 void printStrings(void* s);//declarar en funciones
 

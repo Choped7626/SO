@@ -421,6 +421,14 @@ void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* 
         shared(tr , listBlocks);
     else if (strcmp(tr[0] , "mmap") == 0)
         mmapSO(tr , listBlocks);
+    else if (strcmp(tr[0] , "mem") == 0)
+        mem(tr , listBlocks);
+    else if (strcmp(tr[0] , "memfill") == 0)
+        memFill(tr);
+    else if (strcmp(tr[0] , "recurse") == 0)
+        recurse(tr);
+    else if (strcmp(tr[0] , "memdump") == 0)
+        memdump(tr);
     else if ((strcmp(tr[0], "quit") == 0) || (strcmp(tr[0], "exit") == 0) || (strcmp(tr[0], "bye") == 0))
         closeShell(fin);
     else
@@ -855,7 +863,9 @@ void mallocSO(char* tr[] , tList *listBlocks){
 
             printf("No hay bloque de ese tamano asignado con malloc \n");
 
-        }else if (atoi(tr[1]) != 0){
+        }else if (atoi(tr[1]) <= 0){
+            printf("Cantidad de memoria a asignar inválida\n");
+        }else if (atoi(tr[1]) > 0){
             unsigned int* mallocPointer;
             long tam = strtol(tr[1] , NULL , 10);
             errno = 0;
@@ -874,16 +884,14 @@ void mallocSO(char* tr[] , tList *listBlocks){
             snprintf((char *) bloque1->timeAlloc, sizeof(char[MAX_NAME_LENGTH]) , "%s" , hora);
             bloque1->typeOfAlloc = "malloc";
             bloque1->other[0] = '\0';
-            snprintf(bloque1->fileName, sizeof(char[MAX_NAME_LENGTH]) , "");
+            snprintf(bloque1->fileName, sizeof(char[MAX_NAME_LENGTH]) , " ");
             add_Struct_to_list(listBlocks , bloque1 , tam);//metemos tamaño en numero de orden de lista para poder usar finditem
             printf("Asignados %ld bytes en %p\n" , tam , bloque1->address);
             free(bloque1);
         }else{
-            printf("******Lista de bloques asignados malloc para el proceso %d\n" , getpid());
             printListBlocks(*listBlocks , "malloc" , printStructs);
         }            ///unificar estas duas cousas
     }else{
-        printf("******Lista de bloques asignados malloc para el proceso %d\n" , getpid());
         printListBlocks(*listBlocks , "malloc" , printStructs);
     }
 }
@@ -917,7 +925,7 @@ void * ObtenerMemoriaShmget (key_t clave, size_t tam , tList *listBlocks){
     snprintf(bloque1->timeAlloc, sizeof(char[MAX_NAME_LENGTH]) , "%s" , hora);
     bloque1->size = s.shm_segsz;
     snprintf(bloque1->other, sizeof(char[MAX_NAME_LENGTH]) , "(key %d)" , clave);
-    snprintf(bloque1->fileName, sizeof(char[MAX_NAME_LENGTH]) , "");
+    snprintf(bloque1->fileName, sizeof(char[MAX_NAME_LENGTH]) , " ");
     add_Struct_to_list(listBlocks , bloque1 , clave);
     free(bloque1);
     return (p);
@@ -929,7 +937,6 @@ void do_AllocateCreateshared (char *tr[] , tList *listBlocks){
     void *p;
 
     if (tr[2]==NULL || tr[3]==NULL) {
-        printf("******Lista de bloques asignados shared para el proceso %d\n" , getpid());
         printListBlocks(*listBlocks , "shared" , printStructs);
         return;
     }
@@ -960,21 +967,28 @@ void do_DeallocateDelkey (char *args[]){
         return;
     }
     if (shmctl(id,IPC_RMID,NULL)==-1)
-        perror ("shmctl: imposible eliminar memoria compartida\n");
+        perror ("shmctl: imposible eliminar id de memoria compartida\n");
 }
 ///
 void * sinparam (key_t clave, size_t tam , tList *listBlocks){
     void * p;
-    int aux,id,flags;
+    int aux,id,flags=0777;
     struct shmid_ds s;
     bloque *bloque1 = malloc(sizeof (bloque));
 
     if (tam)     /*tam distito de 0 indica crear */
-        flags = 0777;
+        flags = flags | IPC_CREAT | IPC_EXCL;
     if (clave==IPC_PRIVATE)  /*no nos vale*/
     {errno=EINVAL; return NULL;}
-    if ((id = shmget(clave, tam, flags))==-1)///problema aqui
-        return (NULL);
+    if ((id=shmget(clave, tam, flags))==-1){  //AÑADIDO
+        if(errno == EEXIST) {  // Se xa existe, obtemos o ID do segmento existente
+            id = shmget(clave, 0, 0);
+        }
+        else {
+            return (NULL);
+        }
+    }
+
     if ((p=shmat(id,NULL,0))==(void*) -1){
         aux=errno;
         if (tam)
@@ -1004,19 +1018,13 @@ void do_Allocate (char *tr[] , tList *listBlocks){
     void *p;
 
     if (tr[1]==NULL) {
-        printf("******Lista de bloques asignados shared para el proceso %d\n" , getpid());
         printListBlocks(*listBlocks , "shared" , printStructs);
         return;
     }
 
     cl = (key_t)  strtoul(tr[1],NULL,10);
-
-    if (tam==0) {
-        printf ("No se asignan bloques de 0 bytes\n");
-        return;
-    }
     if ((p=sinparam(cl,tam,listBlocks))!=NULL)
-        printf ("Asignados %lu bytes en %p\n",(unsigned long) tam, p);
+        printf ("Memoria compartida de clave %d en %p\n", cl , p);
     else
         printf ("Imposible asignar memoria compartida clave %lu:%s\n",(unsigned long) cl,strerror(errno));
 }
@@ -1047,9 +1055,101 @@ void shared(char* tr[] , tList *listBlocks){//usar comando ipcs para ver como ap
             do_Allocate(tr , listBlocks); //falta q para shared de n o tamaño se eliga correctamente solo
         }
     }else{
-        printf("******Lista de bloques asignados shared para el proceso %d\n" , getpid());
         printListBlocks(*listBlocks , "shared" , printStructs);
     }
+}
+
+ssize_t EscribirFichero (char *f, void *p, size_t cont, int overwrite){
+    ssize_t  n;
+    int df,aux, flags=O_CREAT | O_EXCL | O_WRONLY;
+
+    if (overwrite)
+        flags=O_CREAT | O_WRONLY | O_TRUNC;
+
+    if ((df=open(f,flags,0777))==-1)
+        return -1;
+
+    if ((n=write(df,p,cont))==-1){
+        aux=errno;
+        close(df);
+        errno=aux;
+        return -1;
+    }
+    close (df);
+    return n;
+}
+
+void writeSO(char *ar[]) {
+    if (ar[1] == NULL || ar[2] == NULL || ar[3] == NULL) {  // comprobamos se non pasan -o, o nome do ficheiro, tamaño
+        printf("faltan parametros\n");                      // ou si pasan o nome do archivo, tamaño e cnt
+        return;
+    }
+
+    char *fileName;
+    void *address;
+    int overwrite = 0;  //Usaremolo para saber se se sobrescribe o ficheiro -o
+    size_t count = -1;  //Cantidade de bytes a escribir, inicializada a -1 para indicar ler todo o contido
+
+    if (strcmp(ar[1], "-o") == 0) {
+        fileName = ar[2];
+        address = (void *)strtoull(ar[3], NULL, 16);
+        if (ar[4] != NULL) {
+            count = (size_t)atoll(ar[4]);
+        }
+        overwrite = 1;
+    } else {  //Igual que o anterior pero como non se fai sobrescritura, os datos tan unha posicion antes
+        fileName = ar[1];
+        address = (void *)strtoull(ar[2], NULL, 16);
+        if (ar[3] != NULL) {
+            count = (size_t)atoll(ar[3]);
+        }
+    }
+
+    ssize_t writtenBytes = EscribirFichero(fileName, address, count, overwrite);
+
+    if (writtenBytes == -1) {
+        perror("Imposible escribir en el fichero");
+    } else {
+        printf("escritos %lld bytes en %s desde %p\n", (long long)writtenBytes, fileName, address);
+    }
+}
+
+ssize_t LeerFichero (char *f, void *p, size_t cont){
+    struct stat s;
+    ssize_t  n;
+    int df,aux;
+
+    if (stat (f,&s)==-1 || (df=open(f,O_RDONLY))==-1)
+        return -1;
+    if (cont==-1)   /* si pasamos -1 como bytes a leer lo leemos entero*/
+        cont=s.st_size;
+    if ((n=read(df,p,cont))==-1){
+        aux=errno;
+        close(df);
+        errno=aux;
+        return -1;
+    }
+
+    close (df);
+    return n;
+}
+
+void readSO (char *ar[]){
+    void *p;
+    size_t cont=-1;  /* -1 indica leer todo el fichero*/
+    ssize_t n;
+    if (ar[1]==NULL || ar[2]==NULL){
+        printf ("faltan parametros\n");
+        return;
+    }
+    p=(void*) strtoull(ar[2],NULL,16);  /*convertimos de cadena a puntero*/
+    if (ar[3]!=NULL)
+        cont=(size_t) atoll(ar[3]);
+
+    if ((n=LeerFichero(ar[1],p,cont))==-1)
+        perror ("Imposible leer fichero");
+    else
+        printf ("leidos %lld bytes de %s en %p\n",(long long) n,ar[1],p);
 }
 
 void * MapearFichero (char * fichero, int protection , tList *listBlocks){
@@ -1084,9 +1184,10 @@ void do_AllocateMmap(char *arg[] , tList *listBlocks){
     void *p;
     int protection=0;
 
-    if (arg[1]==NULL)
-    {printf("******Lista de bloques asignados mmap para el proceso %d\n" , getpid());
-        printListBlocks(*listBlocks , "mmap" , printStructs); return;}
+    if (arg[1]==NULL){
+        printListBlocks(*listBlocks , "mmap" , printStructs);
+        return;
+    }
     if ((perm=arg[2])!=NULL && strlen(perm)<4) {
         if (strchr(perm,'r')!=NULL) protection|=PROT_READ;
         if (strchr(perm,'w')!=NULL) protection|=PROT_WRITE;
@@ -1102,7 +1203,6 @@ void mmapSO (char* tr[] , tList *listBlocks){
     if(tr[1] != NULL){
         if(strcmp("-free" , tr[1]) == 0){
             if(tr[2] == NULL){
-                printf("******Lista de bloques asignados mmap para el proceso %d\n" , getpid());
                 printListBlocks(*listBlocks , "mmap" , printStructs);
                 return;
             }
@@ -1122,9 +1222,137 @@ void mmapSO (char* tr[] , tList *listBlocks){
             do_AllocateMmap(tr , listBlocks);
         }
     }else{
-        printf("******Lista de bloques asignados mmap para el proceso %d\n" , getpid());
         printListBlocks(*listBlocks , "mmap" , printStructs);
     }
 }
 
+void Do_pmap (void){ //sin argumentos
+    pid_t pid;       /*hace el pmap (o equivalente) del proceso actual*/
+    char elpid[32];
+    char *argv[4]={"pmap",elpid,NULL};
 
+    sprintf (elpid,"%d", (int) getpid());
+    if ((pid=fork())==-1){
+        perror ("Imposible crear proceso");
+        return;
+    }
+    if (pid==0){
+        if (execvp(argv[0],argv)==-1)
+            perror("cannot execute pmap (linux, solaris)");
+
+        argv[0]="procstat"; argv[1]="vm"; argv[2]=elpid; argv[3]=NULL;
+        if (execvp(argv[0],argv)==-1)/*No hay pmap, probamos procstat FreeBSD */
+            perror("cannot execute procstat (FreeBSD)");
+
+        argv[0]="procmap",argv[1]=elpid;argv[2]=NULL;
+        if (execvp(argv[0],argv)==-1)  /*probamos procmap OpenBSD*/
+            perror("cannot execute procmap (OpenBSD)");
+
+        argv[0]="vmmap"; argv[1]="-interleave"; argv[2]=elpid;argv[3]=NULL;
+        if (execvp(argv[0],argv)==-1) /*probamos vmmap Mac-OS*/
+            perror("cannot execute vmmap (Mac-OS)");
+        exit(1);
+    }
+    waitpid (pid,NULL,0);
+}
+
+void mem(char* tr[] , tList *listBlocks){
+    if((tr[1] == NULL) || (strcmp(tr[1] , "-all") == 0)){
+
+    }else if(strcmp(tr[1] , "-blocks") == 0){
+        printALLListBlocks(*listBlocks,  printStructs);
+    }else if(strcmp(tr[1] , "-funcs") == 0){
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    }else if(strcmp(tr[1] , "-vars") == 0){
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    }else if(strcmp(tr[1] , "-pmap") == 0){
+        Do_pmap();
+    } else{
+        printf("Opcion %s no contemplada\n" , tr[1]);
+    }
+}
+
+void LlenarMemoria (void *p, size_t cont, unsigned char byte){
+    unsigned char *arr=(unsigned char *) p;
+    size_t i;
+    printf("Llenando %zu bytes de memoria con el byte %c(%X) a partir de la direccion %p\n" , cont , byte , byte , p);
+    for (i=0; i<cont ;i++)
+        arr[i] = byte;
+}
+
+void memFill(char* tr[]){
+    void *p;
+    size_t bytes;
+    int byte;
+    if(tr[1] != NULL){
+        if(tr[2] != NULL){
+            if (tr[3] != NULL){
+                p =(void*) strtoul( tr[1] , NULL , 16);
+                bytes = strtol(tr[2] , NULL , 10);
+                byte = atoi(tr[3]);
+                LlenarMemoria(p , bytes , (char)byte);
+                return;
+            }
+            p =(void*) strtoul( tr[1] , NULL , 16);
+            bytes = strtol(tr[2] , NULL , 10);
+            byte = 'A';
+            LlenarMemoria(p , bytes , byte);
+            return;
+        }
+        p =(void*) strtoul( tr[1] , NULL , 16);
+        bytes = 128;
+        byte = 'A';
+        LlenarMemoria(p , bytes , byte);
+    }
+}
+
+void Recursiva (int n){
+    char automatico[TAMANO];
+    static char estatico[TAMANO];
+    printf ("parametro:%3d(%p) array %p, arr estatico %p\n",n,&n,automatico, estatico);
+    if (n>0)
+        Recursiva(n-1);
+}
+
+void recurse(char* tr[]){
+    if(tr[1] != NULL){
+        int itera;
+        itera = atoi(tr[1]);
+        Recursiva(itera);
+    }
+}
+///work in progress  ||
+///work in progress \_/
+void memdump(char *tr[]) {
+    int cont;
+    char elmImpr;
+    if(tr[1] == NULL)
+        return;
+    if(tr[2] != NULL && atoi(tr[2]) >= 0){
+        cont = atoi(tr[2]);
+    }else
+        cont = 25;
+    long aux = strtoul( tr[1] , NULL , 16);
+    void *addr =(void*) aux;
+    int itera = cont / 25;
+    for(itera ; itera > 0 ; itera--){
+        for (int i = 0; i < 25; ++i) {
+            elmImpr = (unsigned char)&addr;
+            if( elmImpr >= 0x20 && elmImpr < 0x7f) {
+                printf(" %3c ", elmImpr);
+            } else {
+                printf("\\%#03o ", elmImpr);
+            }
+        }
+        printf("\n");
+
+        for(int i = 0; i < 25; i++) {
+            aux += i;
+            addr = (void *) aux;
+            printf("%03x ", addr);
+        }
+        printf("\n");
+        cont -= 25;
+        addr += 25;
+    }
+}

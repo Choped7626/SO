@@ -32,4 +32,10 @@ void deltree(char* tr[]);
 void mallocSO(char* tr[] , tList *listmalloc);
 void shared(char* tr[] , tList *listBlocks);
 void mmapSO(char* tr[] , tList *listBlocks);
+void mem(char* tr[] , tList *listBlocks);
+void memFill(char* tr[]);
+void recurse(char* tr[]);
+void writeSO(char *ar[]);
+void readSO (char *ar[]);
+void memdump(char *tr[]);
 #endif //SO_P0_CABECERAS_H

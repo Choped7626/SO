@@ -63,10 +63,20 @@ void* printList(tList list, void (*fptr)(void *)){
 }
 
 void* printListBlocks(tList list, char* type, void (*fptr)(void *)){
+    printf("******Lista de bloques asignados %s para el proceso %d\n" , type , getpid());
     while (list.head != NULL){
         bloque *bloque1 = list.head->data;
         if(strcmp(bloque1->typeOfAlloc , type) == 0)
             (*fptr)(list.head->data);
+        list.head = list.head->next;
+    }
+    return NULL;
+}
+
+void* printALLListBlocks(tList list, void (*fptr)(void *)){
+    printf("******Lista de bloques asignados para el proceso %d\n", getpid());
+    while (list.head != NULL){
+        (*fptr)(list.head->data);
         list.head = list.head->next;
     }
     return NULL;
