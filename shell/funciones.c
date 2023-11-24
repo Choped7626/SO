@@ -877,24 +877,24 @@ void deltree(char* tr[]) {
 }
 
 void mallocSO(char* tr[] , tList *listBlocks){
-
     if(tr[1] != NULL){
-
-        if(strcmp(tr[1] , "-free") == 0 && tr[2] != NULL){
-            long search = atoi(tr[2]);
-            tPos f;
-            for(f = first(*listBlocks) ; f != NULL ; f = next(f , *listBlocks) ){
-                if(f->dfORCommNUm == search){
-                    bloque *bloqueFree = f->data;
-                    if(strcmp("malloc" , bloqueFree->typeOfAlloc) == 0){
-                        free(bloqueFree->address);
-                        remove_from_list(listBlocks , f);
-                        return;
+        if(strcmp(tr[1] , "-free") == 0){
+            if(tr[2] != NULL){
+                long search = atoi(tr[2]);
+                tPos f;
+                for(f = first(*listBlocks) ; f != NULL ; f = next(f , *listBlocks) ){
+                    if(f->dfORCommNUm == search){
+                        bloque *bloqueFree = f->data;
+                        if(strcmp("malloc" , bloqueFree->typeOfAlloc) == 0){
+                            free(bloqueFree->address);
+                            remove_from_list(listBlocks , f);
+                            return;
+                        }
                     }
                 }
-            }
-
-            printf("No hay bloque de ese tamano asignado con malloc \n");
+                printf("No hay bloque de ese tamano asignado con malloc \n");
+            }else
+                printListBlocks(*listBlocks , "malloc" , printStructs);
 
         }else if (atoi(tr[1]) <= 0){
             printf("Cantidad de memoria a asignar inválida\n");
@@ -1044,7 +1044,7 @@ void * sinparam (key_t clave, size_t tam , tList *listBlocks){
     free(bloque1);
     return (p);
 }
-///talez optimizar porq é CASI LITERALMENTE  o de arriba
+///facil de cambiar e facer q use un único de par para as diferentes opcions pero poucas ganas de traballar e imaginate q despois ten errores ou algo
 void do_Allocate (char *tr[] , tList *listBlocks){
     key_t cl;
     size_t tam = 0;
@@ -1121,7 +1121,7 @@ void writeSO(char *ar[]) {
     char *fileName;
     void *address;
     int overwrite = 0;  //Usaremolo para saber se se sobrescribe o ficheiro -o
-    size_t count = -1;  //Cantidade de bytes a escribir, inicializada a -1 para indicar ler todo o contido
+    size_t count = -1;  //Cantidade de bytes a escribir, inicializada a -1 para indicar ler T0D0 o contido
 
     if (strcmp(ar[1], "-o") == 0) {
         fileName = ar[2];
@@ -1169,7 +1169,7 @@ ssize_t LeerFichero (char *f, void *p, size_t cont){
 
 void readSO (char *ar[]){
     void *p;
-    size_t cont=-1;  /* -1 indica leer todo el fichero*/
+    size_t cont=-1;  /* -1 indica leer T0D0 el fichero*/
     ssize_t n;
     if (ar[1]==NULL || ar[2]==NULL){
         printf ("faltan parametros\n");
@@ -1242,7 +1242,7 @@ void mmapSO (char* tr[] , tList *listBlocks){
             tPos f;
             for(f = first(*listBlocks) ; f != NULL ; f = next(f , *listBlocks) ){
                 bloque *bloqueFree = f->data;
-                if(strcmp("mmap" , bloqueFree->typeOfAlloc) == 0){///por algun jodido motivo cambia o q hay dentro da lista
+                if(strcmp("mmap" , bloqueFree->typeOfAlloc) == 0){
                     if(strcmp(tr[2] , bloqueFree->fileName) == 0){
                         munmap(bloqueFree->address , bloqueFree->size);
                         remove_from_list(listBlocks , f);
@@ -1385,15 +1385,13 @@ void recurse(char* tr[]){
 }
 
 void memdump(char *tr[]) {
-    int cont;
-    void* p;
-    unsigned char * addr;
-    unsigned char c;
-
     if(tr[1] == NULL)
         return;
-    p =(void*) strtoul( tr[1] , NULL , 16);
-    addr = (unsigned char *) p;
+    int cont = 25;
+    void* p = (void*) strtoul( tr[1] , NULL , 16);
+    unsigned char * addr = (unsigned char *) p;
+    unsigned char c;
+
     if(tr[2] != NULL && atoi(tr[2]) >= 0){
         cont = atoi(tr[2]);
     }else

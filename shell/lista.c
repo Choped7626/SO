@@ -88,7 +88,7 @@ void printStrings(void *n){
 
 void printStructs(void *n){
     bloque *bloque1 = n;
-    printf("%10p %15ld %15s %7s %5s \n" , bloque1->address , bloque1->size , bloque1->timeAlloc , bloque1->typeOfAlloc , bloque1->other);
+    printf("\t %10p %15ld %15s %7s %5s \n" , bloque1->address , bloque1->size , bloque1->timeAlloc , bloque1->typeOfAlloc , bloque1->other);
 }
 
 void free_list(tList* list){
