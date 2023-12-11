@@ -10,7 +10,7 @@ Nombre: Mario Lamas Angeriz     Login: m.lamasa@udc.es              Grupo:3.2
 */
 #include "cabeceras.h"
 
-void procesarEntrada(char c[] , bool *fin , tList *histComm , tList *listOpen , tList *listBlocks , tList *listProcss){
+void procesarEntrada(char c[] , bool *fin , tList *histComm , tList *listOpen , tList *listBlocks , tList *listProcss , int argc , char *argv[] , char *env[]){
 
     char *tr[MAX_TOTAL_COMMAND];
 
@@ -24,7 +24,7 @@ void procesarEntrada(char c[] , bool *fin , tList *histComm , tList *listOpen , 
     if(palabras != 0 && palabras != -1){
         num++;
         meterDatos(commNum , tr , histComm);
-        whichCommand(tr , histComm , commNum , fin , recursividad , listOpen , listBlocks , listProcss);
+        whichCommand(tr , histComm , commNum , fin , recursividad , listOpen , listBlocks , listProcss , argc , argv , env);
     }else
     if(palabras == -1){                                         //SI CADENA DEMASIADO LARGA COLLEA VARIAS VECES , PURGAR STDIN?
         printf("Cadena demasiado grande");
@@ -47,7 +47,7 @@ void closeShell (bool *fin){
     *fin = true;
 }
 
-void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* recursividad , tList *listOpen , tList *listBlocks , tList *listProcss){
+void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* recursividad , tList *listOpen , tList *listBlocks , tList *listProcss , int argc , char *argv[] , char *env[]){
 
     if(strcmp(tr[0] , "authors") == 0)
         authors(tr[1]);
@@ -62,7 +62,7 @@ void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* 
     else if(strcmp(tr[0] , "hist") == 0)
         hist(tr[1] , histComm , commNum);
     else if(strcmp(tr[0] , "command") == 0)
-        command(tr , histComm , commNum , fin , recursividad , listOpen , listBlocks , listProcss);
+        command(tr , histComm , commNum , fin , recursividad , listOpen , listBlocks , listProcss , argc , argv , env);
     else if(strcmp(tr[0] , "open") == 0)
         openSO(tr , listOpen);
     else if(strcmp(tr[0] , "close") == 0)
@@ -105,12 +105,22 @@ void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* 
         memdump(tr);
     else if (strcmp(tr[0] , "fork") == 0)
         forkSO(tr , listProcss);
-    else if (strcmp(tr[0] , "exec") == 0)
-        executar(tr);
+    else if (strcmp(tr[0] , "uid") == 0)
+        uid(tr);
+    else if (strcmp(tr[0] , "showvar") == 0)
+        showvar(tr , argc , argv , env);
+    else if (strcmp(tr[0] , "showenv") == 0)
+        showenv(tr , env);
+    else if (strcmp(tr[0] , "changevar") == 0)
+        changevar(tr , env);
+    else if (strcmp(tr[0] , "subsvar") == 0)
+        subsvar(tr , env);
+    //else if (strcmp(tr[0] , "exec") == 0)
+    //    executar(tr);
     else if ((strcmp(tr[0], "quit") == 0) || (strcmp(tr[0], "exit") == 0) || (strcmp(tr[0], "bye") == 0))
         closeShell(fin);
-    else
-        ramaFin(tr);
+    //else
+    //    ramaFin(tr);
 }
 
 void authors(char opciones[]){
@@ -198,7 +208,7 @@ void hist (char opciones[] , tList* histCom , int* commNum){
     }
 }
 
-void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* recursividad , tList *listOpen , tList *listBlocks , tList *listProcss){
+void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* recursividad , tList *listOpen , tList *listBlocks , tList *listProcss , int argc , char *argv[] , char* env[]){
 
     tPos p;
     tNode I;
@@ -231,7 +241,7 @@ void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* rec
                 break;
             }
         }
-        whichCommand(tr ,  histComm , commNum , fin , recursividad , listOpen , listBlocks , listProcss);
+        whichCommand(tr ,  histComm , commNum , fin , recursividad , listOpen , listBlocks , listProcss , argc , argv , env);
         free(cadenaH);
     }
 }
@@ -927,7 +937,7 @@ void mallocSO(char* tr[] , tList *listBlocks){
             free(bloque1);
         }else{
             printListBlocks(*listBlocks , "malloc" , printStructs);
-        }            ///unificar estas duas cousas
+        }
     }else{
         printListBlocks(*listBlocks , "malloc" , printStructs);
     }
@@ -1006,7 +1016,7 @@ void do_DeallocateDelkey (char *args[]){
     if (shmctl(id,IPC_RMID,NULL)==-1)
         perror ("shmctl: imposible eliminar id de memoria compartida\n");
 }
-///
+
 void * sinparam (key_t clave, size_t tam , tList *listBlocks){
     void * p;
     int aux,id,flags=0777;
@@ -1048,7 +1058,7 @@ void * sinparam (key_t clave, size_t tam , tList *listBlocks){
     free(bloque1);
     return (p);
 }
-///facil de cambiar e facer q use un único de par para as diferentes opcions pero poucas ganas de traballar e imaginate q despois ten errores ou algo
+///optimizado penosamente
 void do_Allocate (char *tr[] , tList *listBlocks){
     key_t cl;
     size_t tam = 0;
@@ -1065,7 +1075,7 @@ void do_Allocate (char *tr[] , tList *listBlocks){
     else
         printf ("Imposible asignar memoria compartida clave %lu:%s\n",(unsigned long) cl,strerror(errno));
 }
-///
+
 void shared(char* tr[] , tList *listBlocks){//usar comando ipcs para ver como aparecen y desaparecen
     if(tr[1] != NULL){
         if (strcmp(tr[1] , "-create") == 0 ){
@@ -1450,15 +1460,237 @@ void forkSO(char *tr[] , tList *listProcss){
     }
 }
 
-void ramaFin(char *tr[]){
+void uid(char *tr[]){//a hora de imprimir imprime mal o nombre ¿talvez?
+    int id;
+    uid_t uid , euid;
+    uid = getuid();
+    euid = geteuid();
+    struct passwd *userReal;
+    struct passwd *userEfectivo;
+    userReal = getpwuid(uid);
+    userEfectivo = getpwuid(euid);
+    if(tr[1] != NULL){
+        if(strcmp(tr[1] , "-get") == 0){
+            printf("Credencial real: %d, (%s)\n" , uid , userReal->pw_name);
+            printf("Credencial efectiva: %d, (%s)\n" , euid , userEfectivo->pw_name);
+        }else if(strcmp(tr[1] , "-set") == 0){
+            if(tr[2] != NULL){
+                if(strcmp(tr[2] , "-l") == 0){
+                    if(tr[3] != NULL){
+                        struct passwd *idDesdeLogin;
+                        idDesdeLogin = (getpwnam(tr[3]));
+                        if(setuid(idDesdeLogin->pw_uid) == -1){
+                            perror("Error al cambiar credencial efectiva\n");
+                        }
+                    }
+                }else{
+                    id = atoi(tr[2]);
+                    if(setuid(id) == -1){
+                        perror("Error al cambiar credencial efectiva\n");
+                    }
+                }
+            }
+        }else{
+            printf("Credencial real: %d, (%s)\n" , uid , userReal->pw_name);
+            printf("Credencial efectiva: %d, (%s)\n" , euid , userEfectivo->pw_name);
+        }
+    }else{
+        printf("Credencial real: %d, (%s)\n" , uid , userReal->pw_name);
+        printf("Credencial efectiva: %d, (%s)\n" , euid , userEfectivo->pw_name);
+    }
+}
+//declarado environ en lista.h
+int BuscarVariable (char * var, char *e[]) {/*busca una variable en el entorno que se le pasa como parámetro*/
+    int pos=0;
+    char aux[MAXNAMLEN];
 
+    strcpy (aux,var);
+    strcat (aux,"=");
+
+    while (e[pos]!=NULL)
+        if (!strncmp(e[pos],aux,strlen(aux)))
+            return (pos);
+        else
+            pos++;
+    errno=ENOENT;   /*no hay tal variable*/
+    return(-1);
 }
 
-void executar(char * tr[]){
-    
+
+void MuestraEntorno (char **entorno, char * nombre_entorno) {
+    int i = 0;
+    while (entorno[i]!=NULL) {
+        printf ("%p->%s[%d]=(%p) %s\n", &entorno[i] , nombre_entorno, i ,entorno[i],entorno[i]);
+        i++;
+    }
+}
+
+void showvar(char *tr[] , int argc , char *argv[] , char *env[]) {///ben xa creo
+    if(tr[1] != NULL){
+        int posArg3 , posEnviron , posGetenv;
+        posArg3 = BuscarVariable(tr[1] , env);
+        posEnviron = BuscarVariable(tr[1] , environ);
+        if(posEnviron == -1 || posArg3 == -1){
+            perror("No existe esa variable\n");
+        }else{
+            printf("Con arg3 main %s(%p) @%p\n" , env[posArg3] , env[posArg3] , &env[posArg3]);
+            printf("Con environ %s(%p) @%p\n" , environ[posEnviron] , environ[posEnviron] , &environ[posEnviron]);
+            printf("Con getenv %s(%p)\n" , getenv(tr[1]) , getenv(tr[1]));
+        }
+    }else{
+        MuestraEntorno(env , "main arg3");//O TERCEIRO ARGUMENTO DO MAIN COMUENMENTE CHAMASE ENVP (en este caso env porq se me olvidou poñer a p)
+    }
+}
+
+void showenv(char* tr[] , char *env[]){
+    if(tr[1] != NULL) {
+        if (strcmp(tr[1], "-environ") == 0){
+            MuestraEntorno(environ , "environ");
+        }else if(strcmp(tr[1] , "-addr") == 0){
+            printf("environ:   %p (almacenado en %p)\n" , environ , &environ );
+            printf("main arg3: %p (almacenado en %p)\n" , env , &env );
+        }else
+            printf("Uso: showenv [-environ|-addr]\n");
+    }else{
+        MuestraEntorno(env , "main arg3");//terceiro argumento main , nombrado comunmente envp / env
+    }
+}
+
+int CambiarVariable(char * var, char * valor, char *e[]) { /*cambia una variable en el entorno que se le pasa como parámetro*/
+                                                        /*lo hace directamente, no usa putenv*/
+    int pos;
+    char *aux;
+
+    if ((pos=BuscarVariable(var,e))==-1)
+        return(-1);
+
+    if ((aux=(char *)malloc(strlen(var)+strlen(valor)+2))==NULL)///memory leak lol
+        return -1;
+
+    strcpy(aux,var);
+    strcat(aux,"=");
+    strcat(aux,valor);
+    e[pos]=aux;
+    return (pos);
+}
+
+void changevar(char *tr[] , char *env[]){
+    char *string = malloc(sizeof (char *));///memory leak lol
+    if((tr[1] != NULL)&&(tr[2] != NULL)&&(tr[3] != NULL)){
+        if(strcmp(tr[1] , "-a") == 0){
+            CambiarVariable(tr[2] , tr[3] , env);
+        }else if(strcmp(tr[1] , "-e") == 0){
+            CambiarVariable(tr[2] , tr[3] , environ);
+        }else if(strcmp(tr[1] , "-p") == 0){
+            sprintf(string , "%s=%s" , tr[2] , tr[3]);
+            if(putenv(string) != 0)
+                perror("Error en putenv\n");
+        }else{
+            printf("Uso: changevar [-a|-e|-p] var valor\n");
+        }
+    }else
+        printf("Uso: changevar [-a|-e|-p] var valor\n");
+}
+
+void subsvar(char *tr[] , char* env[]){ ///apostaría a q funciona vaya pero hay q ir pa cama
+    char* sol = malloc(sizeof (char *));///memory leak lol
+    int esteDebeExistir = -1;
+    int esteNo = -1;
+    if((tr[1] != NULL) && (tr[2] != NULL) && (tr[3] != NULL) && (tr[4] != NULL)){
+        if(strcmp(tr[1] , "-e") == 0){
+            esteDebeExistir = BuscarVariable(tr[2] , environ);
+            if(errno != 0){
+                printf("Imposible substituir %s por %s:" , tr[2] , tr[3]);
+                perror(" ");
+                printf("\n");
+            }
+            esteNo = BuscarVariable(tr[3] , environ);
+            if(esteNo == -1){
+                sprintf(sol , "%s=%s" , tr[3] , tr[4]);
+                environ[esteDebeExistir] = sol;
+            }else{
+                printf("Imposible substituir %s por %s , ambos existen ya" , tr[2] , tr[3]);
+            }
+        }else if(strcmp(tr[1] , "-a") == 0){
+            esteDebeExistir = BuscarVariable(tr[2] , env);
+            if(errno != 0){
+                printf("Imposible substituir %s por %s:" , tr[2] , tr[3]);
+                perror(" ");
+                printf("\n");
+            }
+            esteNo = BuscarVariable(tr[3] , env);
+            if(esteNo == -1){
+                sprintf(sol , "%s=%s" , tr[3] , tr[4]);
+                env[esteDebeExistir] = sol;
+            }else{
+                printf("Imposible substituir %s por %s , ambos existen ya" , tr[2] , tr[3]);
+            }
+        }else
+            printf("Uso: subsvar [-a|-e] var valor\n");
+    }else
+        printf("Uso: subsvar [-a|-e] var valor\n");
 }
 
 /*
+
+void ramaFin(char *tr[]){
+    int i , j;
+    bool ruta = true;
+    bool segundoPl = false;
+    char path[50] = "";
+    if (tr[0] != NULL){
+        strcat(path , tr[0]);
+        for (i = 0; tr[i] != NULL ; ++i){
+            if(strchr(tr[i] , '/') != NULL)
+                ruta = false;
+            if(strcmp(tr[i] , "&") == 0)
+                segundoPl = true;
+        }
+        for (j = 1; tr[j] != NULL ; j++) {
+            tr[j-1] = tr[j];
+        }
+        tr[j-1] = tr[j];
+        if(ruta){
+            char path2[50] = "/bin/";
+            strcat(path2 , path);
+            strcpy(path , path2);
+        }
+        if(segundoPl){
+            if(fork() == 0){
+                execvp(path , tr);
+            }
+        }else{
+
+        }
+    }
+}
+
+void executar(char * tr[]){
+    int i , j = 0;
+    bool ruta = true;
+    char path[50] = "";
+    char *args[50];
+    if (tr[1] != NULL){
+        strcat(path , tr[1]);
+        for (i = 1; tr[i] != NULL ; ++i){
+            if(strchr(tr[i] , '/') != NULL)
+                ruta = false;
+            if (i > 1){
+                args[j] = tr[i];
+                j++;
+            }
+        }
+        args[j] = NULL;
+        if(ruta){
+            char path2[50] = "/bin/";
+            strcat(path2 , path);
+            strcpy(path , path2);
+        }
+        execvp(path , args);
+    }
+}
+
+
 void ramaFin(char *tr[]){
     char segundoPlano;
     char path[50] = "/bin/";

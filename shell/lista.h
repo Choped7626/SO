@@ -22,6 +22,8 @@
 #define MAX_TOTAL_COMMAND 100
 #define TAMANO 2048
 
+extern char ** environ;
+
 typedef struct bloquesMem{
     void* address;
     unsigned long size;

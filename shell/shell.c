@@ -4,7 +4,7 @@ Nombre: Mario Lamas Angeriz     Login: m.lamasa@udc.es              Grupo:3.2
 */
 #include "cabeceras.h"
 
-int main(){
+int main(int argc , char *argv[] , char *env[]){
 
     bool F = false;
     bool *fin = &F;
@@ -28,7 +28,7 @@ int main(){
         }
         printf("#");
         fgets(commando , MAX_TOTAL_COMMAND , stdin);
-        procesarEntrada(commando , fin , histComm , listOpen , listmalloc , listaProcss);
+        procesarEntrada(commando , fin , histComm , listOpen , listmalloc , listaProcss , argc , argv , env);
     }
 
     bloque *b;
