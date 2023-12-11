@@ -10,6 +10,109 @@ Nombre: Mario Lamas Angeriz     Login: m.lamasa@udc.es              Grupo:3.2
 */
 #include "cabeceras.h"
 
+void procesarEntrada(char c[] , bool *fin , tList *histComm , tList *listOpen , tList *listBlocks , tList *listProcss){
+
+    char *tr[MAX_TOTAL_COMMAND];
+
+    static int num = 0;
+    static int *commNum = &num;
+
+    int controlRecur = 0;
+    int *recursividad = &controlRecur;
+
+    int palabras = TrozearCadena(c , tr);
+    if(palabras != 0 && palabras != -1){
+        num++;
+        meterDatos(commNum , tr , histComm);
+        whichCommand(tr , histComm , commNum , fin , recursividad , listOpen , listBlocks , listProcss);
+    }else
+    if(palabras == -1){                                         //SI CADENA DEMASIADO LARGA COLLEA VARIAS VECES , PURGAR STDIN?
+        printf("Cadena demasiado grande");
+
+    }else
+        printf("Cadena Vacia\n");
+}
+
+int TrozearCadena(char* cadena , char* tr[]){
+    int i = 1;
+    if ((tr[0]=strtok(cadena," \n\t"))==NULL)
+        return 0;
+    while ((tr[i]=strtok(NULL," \n\t"))!=NULL)
+        i++;
+    i > 49 ? i = -1 : i;
+    return i;
+}
+
+void closeShell (bool *fin){
+    *fin = true;
+}
+
+void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* recursividad , tList *listOpen , tList *listBlocks , tList *listProcss){
+
+    if(strcmp(tr[0] , "authors") == 0)
+        authors(tr[1]);
+    else if(strcmp(tr[0] , "pid") == 0)
+        pid(tr[1]);
+    else if(strcmp(tr[0] , "chdir") == 0)
+        chdirSO(tr[1]);
+    else if(strcmp(tr[0] , "date") == 0)
+        date();
+    else if(strcmp(tr[0] , "time") == 0)
+        timeSO();
+    else if(strcmp(tr[0] , "hist") == 0)
+        hist(tr[1] , histComm , commNum);
+    else if(strcmp(tr[0] , "command") == 0)
+        command(tr , histComm , commNum , fin , recursividad , listOpen , listBlocks , listProcss);
+    else if(strcmp(tr[0] , "open") == 0)
+        openSO(tr , listOpen);
+    else if(strcmp(tr[0] , "close") == 0)
+        closeSO(tr , listOpen);
+    else if (strcmp(tr[0], "dup") == 0)
+        dupSO(tr , listOpen);
+    else if (strcmp(tr[0], "listopen") == 0)
+        listOpenFiles(listOpen);
+    else if (strcmp(tr[0], "infosys") == 0)
+        infosys();
+    else if (strcmp(tr[0] , "create") == 0)
+        create(tr);
+    else if (strcmp(tr[0] , "stat") == 0)
+        statSO(tr);
+    else if (strcmp(tr[0] , "list") == 0)
+        list(tr);
+    else if (strcmp(tr[0] , "delete") == 0)
+        delete(tr);
+    else if (strcmp(tr[0] , "deltree") == 0)
+        deltree(tr);
+    else if (strcmp(tr[0], "help") == 0)
+        help(tr[1]);
+    else if (strcmp(tr[0] , "malloc") == 0)
+        mallocSO(tr , listBlocks);
+    else if (strcmp(tr[0] , "shared") == 0)
+        shared(tr , listBlocks);
+    else if (strcmp(tr[0] , "mmap") == 0)
+        mmapSO(tr , listBlocks);
+    else if (strcmp(tr[0] , "read") == 0)
+        readSO(tr);
+    else if (strcmp(tr[0] , "write") == 0)
+        writeSO(tr);
+    else if (strcmp(tr[0] , "mem") == 0)
+        mem(tr , listBlocks);
+    else if (strcmp(tr[0] , "memfill") == 0)
+        memFill(tr);
+    else if (strcmp(tr[0] , "recurse") == 0)
+        recurse(tr);
+    else if (strcmp(tr[0] , "memdump") == 0)
+        memdump(tr);
+    else if (strcmp(tr[0] , "fork") == 0)
+        forkSO(tr , listProcss);
+    else if (strcmp(tr[0] , "exec") == 0)
+        executar(tr);
+    else if ((strcmp(tr[0], "quit") == 0) || (strcmp(tr[0], "exit") == 0) || (strcmp(tr[0], "bye") == 0))
+        closeShell(fin);
+    else
+        ramaFin(tr);
+}
+
 void authors(char opciones[]){
     if(opciones == NULL){
 
@@ -87,15 +190,15 @@ void hist (char opciones[] , tList* histCom , int* commNum){
         copy = *histCom;
         tPos fin = findCommORdf(*histCom , (void*)(long)strtol(opciones , NULL , 10));
         for (tPos i = first(*histCom); i != fin->next ; i = next(i , *histCom)) {
-                (printStrings)(copy.head->data);
-                copy.head = copy.head->next;
+            (printStrings)(copy.head->data);
+            copy.head = copy.head->next;
         }
     }else{
         printf("Opcion Inexistente");
     }
 }
 
-void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* recursividad , tList *listOpen , tList *listBlocks){
+void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* recursividad , tList *listOpen , tList *listBlocks , tList *listProcss){
 
     tPos p;
     tNode I;
@@ -128,7 +231,7 @@ void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* rec
                 break;
             }
         }
-        whichCommand(tr ,  histComm , commNum , fin , recursividad , listOpen , listBlocks);
+        whichCommand(tr ,  histComm , commNum , fin , recursividad , listOpen , listBlocks , listProcss);
         free(cadenaH);
     }
 }
@@ -402,105 +505,6 @@ void meterDatos(const int* num , char *tr[], tList *hist){
     free(commName);
 }
 
-void closeShell (bool *fin){
-    *fin = true;
-}
-
-void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* recursividad , tList *listOpen , tList *listBlocks){
-
-    if(strcmp(tr[0] , "authors") == 0)
-        authors(tr[1]);
-    else if(strcmp(tr[0] , "pid") == 0)
-        pid(tr[1]);
-    else if(strcmp(tr[0] , "chdir") == 0)
-        chdirSO(tr[1]);
-    else if(strcmp(tr[0] , "date") == 0)
-        date();
-    else if(strcmp(tr[0] , "time") == 0)
-        timeSO();
-    else if(strcmp(tr[0] , "hist") == 0)
-        hist(tr[1] , histComm , commNum);
-    else if(strcmp(tr[0] , "command") == 0)
-        command(tr , histComm , commNum , fin , recursividad , listOpen , listBlocks);
-    else if(strcmp(tr[0] , "open") == 0)
-        openSO(tr , listOpen);
-    else if(strcmp(tr[0] , "close") == 0)
-        closeSO(tr , listOpen);
-    else if (strcmp(tr[0], "dup") == 0)
-        dupSO(tr , listOpen);
-    else if (strcmp(tr[0], "listopen") == 0)
-        listOpenFiles(listOpen);
-    else if (strcmp(tr[0], "infosys") == 0)
-        infosys();
-    else if (strcmp(tr[0] , "create") == 0)
-        create(tr);
-    else if (strcmp(tr[0] , "stat") == 0)
-        statSO(tr);
-    else if (strcmp(tr[0] , "list") == 0)
-        list(tr);
-    else if (strcmp(tr[0] , "delete") == 0)
-        delete(tr);
-    else if (strcmp(tr[0] , "deltree") == 0)
-        deltree(tr);
-    else if (strcmp(tr[0], "help") == 0)
-        help(tr[1]);
-    else if (strcmp(tr[0] , "malloc") == 0)
-        mallocSO(tr , listBlocks);
-    else if (strcmp(tr[0] , "shared") == 0)
-        shared(tr , listBlocks);
-    else if (strcmp(tr[0] , "mmap") == 0)
-        mmapSO(tr , listBlocks);
-    else if (strcmp(tr[0] , "read") == 0)
-        readSO(tr);
-    else if (strcmp(tr[0] , "write") == 0)
-        writeSO(tr);
-    else if (strcmp(tr[0] , "mem") == 0)
-        mem(tr , listBlocks);
-    else if (strcmp(tr[0] , "memfill") == 0)
-        memFill(tr);
-    else if (strcmp(tr[0] , "recurse") == 0)
-        recurse(tr);
-    else if (strcmp(tr[0] , "memdump") == 0)
-        memdump(tr);
-    else if ((strcmp(tr[0], "quit") == 0) || (strcmp(tr[0], "exit") == 0) || (strcmp(tr[0], "bye") == 0))
-        closeShell(fin);
-    else
-        printf("Comando inexistente\n");
-}
-
-int TrozearCadena(char* cadena , char* tr[]){
-    int i = 1;
-    if ((tr[0]=strtok(cadena," \n\t"))==NULL)
-        return 0;
-    while ((tr[i]=strtok(NULL," \n\t"))!=NULL)
-        i++;
-    i > 49 ? i = -1 : i;
-    return i;
-}
-
-void procesarEntrada(char c[] , bool *fin , tList *histComm , tList *listOpen , tList *listBlocks){
-
-    char *tr[MAX_TOTAL_COMMAND];
-
-    static int num = 0;
-    static int *commNum = &num;
-
-    int controlRecur = 0;
-    int *recursividad = &controlRecur;
-
-    int palabras = TrozearCadena(c , tr);
-    if(palabras != 0 && palabras != -1){
-        num++;
-        meterDatos(commNum , tr , histComm);
-        whichCommand(tr , histComm , commNum , fin , recursividad , listOpen , listBlocks);
-    }else
-        if(palabras == -1){                                         //SI CADENA DEMASIADO LARGA COLLEA VARIAS VECES , PURGAR STDIN?
-            printf("Cadena demasiado grande");
-
-        }else
-            printf("Cadena Vacia");
-}
-
 char LetraTF (mode_t m){
     switch (m&S_IFMT) { /*and bit a bit con los bits de formato,0170000 */
         case S_IFSOCK: return 's'; /*socket */
@@ -634,7 +638,7 @@ void statSO(char* tr[]){
         }
 
         }else{
-            printf("error al accder a %s : %s\n" , tr[name] , strerror(errno));
+            printf("error al acceder a %s : %s\n" , tr[name] , strerror(errno));
         }
     }
     if(tr[i] == NULL){
@@ -1244,6 +1248,7 @@ void mmapSO (char* tr[] , tList *listBlocks){
                 bloque *bloqueFree = f->data;
                 if(strcmp("mmap" , bloqueFree->typeOfAlloc) == 0){
                     if(strcmp(tr[2] , bloqueFree->fileName) == 0){
+                        close(f->dfORCommNUm);
                         munmap(bloqueFree->address , bloqueFree->size);
                         remove_from_list(listBlocks , f);
                         return;
@@ -1404,7 +1409,7 @@ void memdump(char *tr[]) {
                 if(c >= 0x20 && c < 0x7f){
                     printf(" %2c " , c);
                 }else{
-                    printf("\\%#02o" , c);
+                    printf("  ");
                 }
             }
             printf("\n");
@@ -1420,7 +1425,7 @@ void memdump(char *tr[]) {
                 if(c >= 0x20 && c < 0x7f){
                     printf(" %2c " , c);
                 }else{
-                    printf("\\%#02o" , c);
+                    printf("  ");
                 }
             }
             printf("\n");
@@ -1433,3 +1438,50 @@ void memdump(char *tr[]) {
         }
     }
 }
+
+void forkSO(char *tr[] , tList *listProcss){
+    pid_t pid;
+    if ((pid=fork())==0){
+        delete_list(listProcss);
+        printf ("ejecutando proceso %d\n", getpid());
+    }
+    else if (pid!=-1) {
+        waitpid(pid, NULL, 0);
+    }
+}
+
+void ramaFin(char *tr[]){
+
+}
+
+void executar(char * tr[]){
+    
+}
+
+/*
+void ramaFin(char *tr[]){
+    char segundoPlano;
+    char path[50] = "/bin/";
+    if(tr[0] != NULL){
+        strcat(path , tr[0]);
+        for (int i = 0; tr[i] != NULL ; ++i)
+            segundoPlano = *tr[i];
+        if(segundoPlano == '&'){
+            if(fork() == 0){
+                execv(path , tr);
+            }
+        } else;
+            //execv(path , tr); socorro
+    }
+}
+
+
+void executar(char *tr[]){
+    if(tr[1] != NULL){
+        char path[50] = "/bin/";
+        strcat(path , tr[1]);
+        fork();
+        execv(path , tr);
+    }
+}
+ */

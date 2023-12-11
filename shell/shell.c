@@ -12,7 +12,7 @@ int main(){
     tList *histComm = create_list();
     tList *listOpen = create_list();
     tList *listmalloc = create_list();
-
+    tList *listaProcss = create_list();
 
     char commando[MAX_TOTAL_COMMAND];
 ///
@@ -28,7 +28,7 @@ int main(){
         }
         printf("#");
         fgets(commando , MAX_TOTAL_COMMAND , stdin);
-        procesarEntrada(commando , fin , histComm , listOpen , listmalloc);
+        procesarEntrada(commando , fin , histComm , listOpen , listmalloc , listaProcss);
     }
 
     bloque *b;
@@ -39,6 +39,7 @@ int main(){
         }else if(strcmp("shared" , b->typeOfAlloc) == 0){
             shmdt(b->address);
         }else if(strcmp("mmap" , b->typeOfAlloc) == 0){
+            close(p->dfORCommNUm);
             munmap(b->address , b->size);
         }
         }
@@ -46,4 +47,5 @@ int main(){
     free_list(listmalloc);
     free_list(histComm);
     free_list(listOpen);
+    free_list(listaProcss);
 }

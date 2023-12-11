@@ -31,6 +31,8 @@ typedef struct bloquesMem{
     char fileName[MAX_NAME_LENGTH];
 }bloque;
 
+/*tipo del process*/
+
 typedef struct tNode* tPos;
 
 typedef struct tNode{
