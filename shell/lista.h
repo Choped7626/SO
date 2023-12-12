@@ -7,6 +7,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <sys/utsname.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -19,6 +20,7 @@
 #include <grp.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
+#include <sys/resource.h>
 #define MAX_TOTAL_COMMAND 100
 #define TAMANO 2048
 
@@ -33,7 +35,31 @@ typedef struct bloquesMem{
     char fileName[MAX_NAME_LENGTH];
 }bloque;
 
-/*tipo del process*/
+struct SEN{
+    char *nombre;
+    int senal;
+};
+
+typedef enum {
+    ACTIVE,
+    STOPPED,
+    FINISHED,
+    SIGNALED
+}StatusProcess;
+
+static char *StatusName[] = {
+        "Active",
+        "Stopped",
+        "Finished",
+        "Signaled"
+};
+typedef struct job {
+    pid_t pid;
+    struct tm *create;
+    StatusProcess status;
+    char *program;
+    int senial;
+}job;
 
 typedef struct tNode* tPos;
 
@@ -53,6 +79,10 @@ tList* create_list();
 void add_String_to_list(tList* list , void* data , long id);
 
 void add_Struct_to_list(tList* list , void* data , long id);
+
+void add_address_to_list(tList* list , void* data);
+
+void add_process_to_list(tList* list , void* data , long id);
 
 bool remove_from_list(tList* list , tPos P);
 

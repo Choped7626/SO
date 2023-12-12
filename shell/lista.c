@@ -54,6 +54,43 @@ void add_Struct_to_list(tList* list , void* data , long id){
     }
 }
 
+void add_process_to_list(tList* list , void* data , long id){
+    tNode *new_node = malloc(sizeof(struct tNode));
+    new_node->data = malloc(sizeof (job));
+    memcpy(new_node->data , data , sizeof (job));
+    new_node->next = NULL;
+    new_node->dfORCommNUm = id;
+    tNode* copia;
+    if(isEmpty(*list)){
+        list->head = new_node;
+        list->size++;
+        list->head->dfORCommNUm = id;
+        return;
+    }else {
+        for (copia = list->head; copia->next != NULL; copia = copia->next);
+        copia->next = new_node;
+        list->size++;
+        return;
+    }
+}
+
+void add_address_to_list(tList* list , void* data){
+    tNode *new_node = malloc(sizeof(struct tNode));
+    new_node->data = data;
+    new_node->next = NULL;
+    tNode* copia;
+    if(isEmpty(*list)){
+        list->head = new_node;
+        list->size++;
+        return;
+    }else {
+        for (copia = list->head; copia->next != NULL; copia = copia->next);
+        copia->next = new_node;
+        list->size++;
+        return;
+    }
+}
+
 void* printList(tList list, void (*fptr)(void *)){
     while (list.head != NULL){
         (*fptr)(list.head->data);

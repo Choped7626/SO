@@ -13,6 +13,7 @@ int main(int argc , char *argv[] , char *env[]){
     tList *listOpen = create_list();
     tList *listmalloc = create_list();
     tList *listaProcss = create_list();
+    tList *evitarLeaks = create_list();
 
     char commando[MAX_TOTAL_COMMAND];
 ///
@@ -28,7 +29,7 @@ int main(int argc , char *argv[] , char *env[]){
         }
         printf("#");
         fgets(commando , MAX_TOTAL_COMMAND , stdin);
-        procesarEntrada(commando , fin , histComm , listOpen , listmalloc , listaProcss , argc , argv , env);
+        procesarEntrada(commando , fin , histComm , listOpen , listmalloc , listaProcss , argc , argv , env , evitarLeaks);
     }
 
     bloque *b;
@@ -48,4 +49,5 @@ int main(int argc , char *argv[] , char *env[]){
     free_list(histComm);
     free_list(listOpen);
     free_list(listaProcss);
+    free_list(evitarLeaks);
 }

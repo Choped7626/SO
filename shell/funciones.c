@@ -10,7 +10,7 @@ Nombre: Mario Lamas Angeriz     Login: m.lamasa@udc.es              Grupo:3.2
 */
 #include "cabeceras.h"
 
-void procesarEntrada(char c[] , bool *fin , tList *histComm , tList *listOpen , tList *listBlocks , tList *listProcss , int argc , char *argv[] , char *env[]){
+void procesarEntrada(char c[] , bool *fin , tList *histComm , tList *listOpen , tList *listBlocks , tList *listProcss , int argc , char *argv[] , char *env[] , tList *evitarLeaks){
 
     char *tr[MAX_TOTAL_COMMAND];
 
@@ -24,7 +24,7 @@ void procesarEntrada(char c[] , bool *fin , tList *histComm , tList *listOpen , 
     if(palabras != 0 && palabras != -1){
         num++;
         meterDatos(commNum , tr , histComm);
-        whichCommand(tr , histComm , commNum , fin , recursividad , listOpen , listBlocks , listProcss , argc , argv , env);
+        whichCommand(tr , histComm , commNum , fin , recursividad , listOpen , listBlocks , listProcss , argc , argv , env , evitarLeaks);
     }else
     if(palabras == -1){                                         //SI CADENA DEMASIADO LARGA COLLEA VARIAS VECES , PURGAR STDIN?
         printf("Cadena demasiado grande");
@@ -47,7 +47,7 @@ void closeShell (bool *fin){
     *fin = true;
 }
 
-void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* recursividad , tList *listOpen , tList *listBlocks , tList *listProcss , int argc , char *argv[] , char *env[]){
+void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* recursividad , tList *listOpen , tList *listBlocks , tList *listProcss , int argc , char *argv[] , char *env[] , tList *evitarLeaks){
 
     if(strcmp(tr[0] , "authors") == 0)
         authors(tr[1]);
@@ -62,7 +62,7 @@ void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* 
     else if(strcmp(tr[0] , "hist") == 0)
         hist(tr[1] , histComm , commNum);
     else if(strcmp(tr[0] , "command") == 0)
-        command(tr , histComm , commNum , fin , recursividad , listOpen , listBlocks , listProcss , argc , argv , env);
+        command(tr , histComm , commNum , fin , recursividad , listOpen , listBlocks , listProcss , argc , argv , env , evitarLeaks);
     else if(strcmp(tr[0] , "open") == 0)
         openSO(tr , listOpen);
     else if(strcmp(tr[0] , "close") == 0)
@@ -112,15 +112,17 @@ void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* 
     else if (strcmp(tr[0] , "showenv") == 0)
         showenv(tr , env);
     else if (strcmp(tr[0] , "changevar") == 0)
-        changevar(tr , env);
+        changevar(tr , env , evitarLeaks);
     else if (strcmp(tr[0] , "subsvar") == 0)
-        subsvar(tr , env);
-    //else if (strcmp(tr[0] , "exec") == 0)
-    //    executar(tr);
+        subsvar(tr , env , evitarLeaks);
+    else if (strcmp(tr[0] , "exec") == 0)
+        executar(tr);
+    else if (strcmp(tr[0] , "jobs") == 0)
+        jobsSO(listProcss);
     else if ((strcmp(tr[0], "quit") == 0) || (strcmp(tr[0], "exit") == 0) || (strcmp(tr[0], "bye") == 0))
         closeShell(fin);
-    //else
-    //    ramaFin(tr);
+    else
+        ramaFin(tr , listProcss);
 }
 
 void authors(char opciones[]){
@@ -208,7 +210,7 @@ void hist (char opciones[] , tList* histCom , int* commNum){
     }
 }
 
-void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* recursividad , tList *listOpen , tList *listBlocks , tList *listProcss , int argc , char *argv[] , char* env[]){
+void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* recursividad , tList *listOpen , tList *listBlocks , tList *listProcss , int argc , char *argv[] , char* env[] , tList *evitarLeaks){
 
     tPos p;
     tNode I;
@@ -241,7 +243,7 @@ void command (char *tr[] , tList *histComm , int* commNum , bool* fin , int* rec
                 break;
             }
         }
-        whichCommand(tr ,  histComm , commNum , fin , recursividad , listOpen , listBlocks , listProcss , argc , argv , env);
+        whichCommand(tr ,  histComm , commNum , fin , recursividad , listOpen , listBlocks , listProcss , argc , argv , env , evitarLeaks);
         free(cadenaH);
     }
 }
@@ -407,7 +409,9 @@ void help (char opciones[]){
                "close [df] \n dup [df] \n listopen \n infosys \n create [-f] [name] \n list [-reca] [-recb] [-hid][-long][-link][-acc] n1 n2 .. \n"
                " stat [-long][-link][-acc] name1 name2 .. \n delete [name1 name2 ..] \n deltree [name1 name2 ..] \n help [cmd] \n malloc [-free] \n"
                " shared [-free|-create|-delkey] cl [tam] \n mmap [-free] fich prm \n read fich addr cont \n write [-o] fiche addr cont \n memdump addr cont \n"
-               " memfill addr cont byte \n mem [-blocks|-funcs|-vars|-all|-pmap] ..\n recurse [n]\n quit \n exit \n bye \n");
+               " memfill addr cont byte \n mem [-blocks|-funcs|-vars|-all|-pmap] ..\n recurse [n]\n uid [-get|-set] [-l] [id]\n showvar var\n changevar [-a|-e|-p] var valor \n"
+               " subsvar [-a|-e] var1 var2 valor \n showenv [-environ|-addr] \n fork \n exec VAR1 VAR2 ..prog args....[@pri] \n jobs \n deljobs [-term][-sig] \n "
+               "job [-fg] pid \n quit \n exit \n bye \n");
     }else if(strcmp(opciones , "authors") == 0){
         printf("Prints the names and logins of the program authors. \n authors -l prints"
                "only the logins \n authors -n prints only the names\n");
@@ -495,9 +499,44 @@ void help (char opciones[]){
                "\t-pmap: show the output of the pmap command (or similar)\n");
     }else if(strcmp(opciones, "recurse") == 0){
         printf("recurse[n]  Call the recursive function n times\n");
+    }else if (strcmp(opciones, "uid") == 0){
+        printf("uid [-get|-set] [-l] [id]   Access the credentials of the process that runs the shell\n"
+               "\t-get: show credentials\n"
+               "\t-set id: sets the credential to the numerical value id\n"
+               "\t-set -l id: set the credential to login id\n");
+    }else if (strcmp(opciones, "showvar") == 0) {
+        printf("showvar var    Displays the value and addresses of the var environment variable\n");
+    }else if (strcmp(opciones, "changevar") == 0) {
+        printf("changevar [-a|-e|-p] var valor  Change the value of an enviroment variable\n"
+               "\t-a: access throught the third arg of main\n"
+               "\t-e: access via environ\n"
+               "\t-p: access via putenv\n");
+    }else if (strcmp(opciones, "subsvar") == 0){
+        printf("subsvar [-a|-e] var1 var2 valor     Replaces the var1 environment variable with var2=value\n"
+               "\t-a: access through the third arg of main\n"
+               "\t-e: access via environ\n");
+    }else if (strcmp(opciones, "showenv") == 0) {
+        printf("showenv [-environ|-addr]   Shows the process environment\n"
+               "\t-environ: access using environ (instead of the third arg of main)\n"
+               "\t-addr: show the value and where environ and the 3rd arg main are stored\n");
+    }else if(strcmp(opciones, "fork") == 0){
+        printf("fork    The shell forks and waits for its child to finish\n");
+    }else if (strcmp(opciones, "exec") == 0) {
+        printf("exec VAR1 VAR2 ..prog args....[@pri]   Execute, without creating a process, a prog with arguments in an environment\n"
+               "that contains only the variables VAR1, VAR2...\n ");
+    }else if (strcmp(opciones, "jobs") == 0) {
+        printf("jobs    List background processes\n");
+    }else if (strcmp(opciones, "deljobs") == 0){
+        printf("deljobs [-term][-sig]   Remove processes from the processes list in sp\n"
+               "\t-term: the finished ones\n"
+               "\t-sig: those terminated by signal\n");
+    }else if (strcmp(opciones, "job") == 0){
+        printf("job [-fg] pid   Shows information about the pid process\n"
+               "\t-fg: brings it to the foreground\n");
     }else if(strcmp(opciones , "quit") == 0 || strcmp(opciones , "bye") == 0 || strcmp(opciones , "exit") == 0){
         printf("Ends the shell\n");
-    }else
+    }
+    else
         printf("Comando Inexistente");
 }
 
@@ -1516,7 +1555,6 @@ int BuscarVariable (char * var, char *e[]) {/*busca una variable en el entorno q
     return(-1);
 }
 
-
 void MuestraEntorno (char **entorno, char * nombre_entorno) {
     int i = 0;
     while (entorno[i]!=NULL) {
@@ -1530,13 +1568,12 @@ void showvar(char *tr[] , int argc , char *argv[] , char *env[]) {///ben xa creo
         int posArg3 , posEnviron , posGetenv;
         posArg3 = BuscarVariable(tr[1] , env);
         posEnviron = BuscarVariable(tr[1] , environ);
-        if(posEnviron == -1 || posArg3 == -1){
-            perror("No existe esa variable\n");
-        }else{
+        if(posArg3 != -1)
             printf("Con arg3 main %s(%p) @%p\n" , env[posArg3] , env[posArg3] , &env[posArg3]);
+        if(posEnviron != -1)
             printf("Con environ %s(%p) @%p\n" , environ[posEnviron] , environ[posEnviron] , &environ[posEnviron]);
+        if(getenv(tr[1]) != NULL)
             printf("Con getenv %s(%p)\n" , getenv(tr[1]) , getenv(tr[1]));
-        }
     }else{
         MuestraEntorno(env , "main arg3");//O TERCEIRO ARGUMENTO DO MAIN COMUENMENTE CHAMASE ENVP (en este caso env porq se me olvidou poñer a p)
     }
@@ -1556,7 +1593,7 @@ void showenv(char* tr[] , char *env[]){
     }
 }
 
-int CambiarVariable(char * var, char * valor, char *e[]) { /*cambia una variable en el entorno que se le pasa como parámetro*/
+int CambiarVariable(char * var, char * valor, char *e[] , tList *evitarLeaks) { /*cambia una variable en el entorno que se le pasa como parámetro*/
                                                         /*lo hace directamente, no usa putenv*/
     int pos;
     char *aux;
@@ -1571,16 +1608,20 @@ int CambiarVariable(char * var, char * valor, char *e[]) { /*cambia una variable
     strcat(aux,"=");
     strcat(aux,valor);
     e[pos]=aux;
+    add_address_to_list(evitarLeaks , aux);
     return (pos);
 }
 
-void changevar(char *tr[] , char *env[]){
-    char *string = malloc(sizeof (char *));///memory leak lol
+void changevar(char *tr[] , char *env[] , tList *evitarLeaks){
     if((tr[1] != NULL)&&(tr[2] != NULL)&&(tr[3] != NULL)){
+        char *string = malloc(sizeof (char *));///memory leak lol
+        add_address_to_list(evitarLeaks , string);
         if(strcmp(tr[1] , "-a") == 0){
-            CambiarVariable(tr[2] , tr[3] , env);
+            if(CambiarVariable(tr[2] , tr[3] , env , evitarLeaks) == -1)
+                perror("Imposible cambiar variable\n");
         }else if(strcmp(tr[1] , "-e") == 0){
-            CambiarVariable(tr[2] , tr[3] , environ);
+            if(CambiarVariable(tr[2] , tr[3] , environ , evitarLeaks) == -1)
+                perror("Imposible cambiar variable\n");
         }else if(strcmp(tr[1] , "-p") == 0){
             sprintf(string , "%s=%s" , tr[2] , tr[3]);
             if(putenv(string) != 0)
@@ -1592,11 +1633,12 @@ void changevar(char *tr[] , char *env[]){
         printf("Uso: changevar [-a|-e|-p] var valor\n");
 }
 
-void subsvar(char *tr[] , char* env[]){ ///apostaría a q funciona vaya pero hay q ir pa cama
-    char* sol = malloc(sizeof (char *));///memory leak lol
-    int esteDebeExistir = -1;
-    int esteNo = -1;
+void subsvar(char *tr[] , char* env[] , tList *evitarLeaks){ ///apostaría a q funciona vaya pero hay q ir pa cama
     if((tr[1] != NULL) && (tr[2] != NULL) && (tr[3] != NULL) && (tr[4] != NULL)){
+        char* sol = malloc(sizeof (char *));///memory leak lol
+        add_address_to_list(evitarLeaks , sol);
+        int esteDebeExistir = -1;
+        int esteNo = -1;
         if(strcmp(tr[1] , "-e") == 0){
             esteDebeExistir = BuscarVariable(tr[2] , environ);
             if(errno != 0){
@@ -1631,89 +1673,231 @@ void subsvar(char *tr[] , char* env[]){ ///apostaría a q funciona vaya pero hay
         printf("Uso: subsvar [-a|-e] var valor\n");
 }
 
-/*
+void executar(char* tr[]){
+    if(tr[1] != NULL){
+        char *args[25];
+        for (int i = 1; tr[i] != NULL; ++i) {
+            args[i-1] = tr[i];
+            args[i] = NULL;
+        }
+        if(execvp(tr[1] , args) == -1)
+            perror("Imposible ejecutar\n");
+    }
+}
 
-void ramaFin(char *tr[]){
-    int i , j;
-    bool ruta = true;
-    bool segundoPl = false;
-    char path[50] = "";
-    if (tr[0] != NULL){
-        strcat(path , tr[0]);
-        for (i = 0; tr[i] != NULL ; ++i){
-            if(strchr(tr[i] , '/') != NULL)
-                ruta = false;
-            if(strcmp(tr[i] , "&") == 0)
-                segundoPl = true;
+void ramaFin(char *tr[] , tList *listProcss){//usar man en segundo plano malo
+    if(tr[0] != NULL){
+        pid_t pid , w;
+        int wstatus;
+        char *args[25];
+        bool plano = false;
+        for (int i = 0; tr[i] != NULL; ++i) {
+            if (strcmp(tr[i], "&") == 0) {
+                plano = true;
+            } else {
+                args[i] = tr[i];
+                args[i + 1] = NULL;
+            }
         }
-        for (j = 1; tr[j] != NULL ; j++) {
-            tr[j-1] = tr[j];
-        }
-        tr[j-1] = tr[j];
-        if(ruta){
-            char path2[50] = "/bin/";
-            strcat(path2 , path);
-            strcpy(path , path2);
-        }
-        if(segundoPl){
-            if(fork() == 0){
-                execvp(path , tr);
+        if(plano){///lol mal
+            if(fork() == 0) {
+                /*char* aux;
+                job *proceso = malloc(sizeof (struct job));
+                time_t tiempo;
+                time(&tiempo);
+                proceso->pid = getpid();
+                proceso->create = localtime(&tiempo);
+                proceso->status = ACTIVE;
+                for (int i = 0; args[i] != NULL ; ++i) {
+                    aux = args[i];
+                    if(i == 0)
+                        snprintf(proceso->program , sizeof (char *) , "%s " , aux);
+                    strcat(proceso->program , aux);
+                    strcat(proceso->program , " ");
+                }
+                proceso->senial = 0;
+                add_process_to_list(listProcss , proceso , 0);*/
+                if(execvp(tr[0] , args) == -1){
+                    perror("Error al ejecutar");
+                    exit(EXIT_FAILURE);
+                }
             }
         }else{
-
-        }
-    }
-}
-
-void executar(char * tr[]){
-    int i , j = 0;
-    bool ruta = true;
-    char path[50] = "";
-    char *args[50];
-    if (tr[1] != NULL){
-        strcat(path , tr[1]);
-        for (i = 1; tr[i] != NULL ; ++i){
-            if(strchr(tr[i] , '/') != NULL)
-                ruta = false;
-            if (i > 1){
-                args[j] = tr[i];
-                j++;
+            if((pid = fork()) == 0){
+                if(execvp(tr[0] , args) == -1){
+                    perror("Error al ejecutar");
+                    exit(EXIT_FAILURE);
+                }
+            }else{
+                do {
+                    w = waitpid(pid, &wstatus, WUNTRACED | WCONTINUED);
+                    if (w == -1) {
+                        perror("Waitpid:");
+                        exit(EXIT_FAILURE);
+                    }
+                } while (!WIFEXITED(wstatus) && !WIFSIGNALED(wstatus));
             }
         }
-        args[j] = NULL;
-        if(ruta){
-            char path2[50] = "/bin/";
-            strcat(path2 , path);
-            strcpy(path , path2);
+    }
+}
+
+static struct SEN sigstrnum[]={
+        {"HUP", SIGHUP},
+        {"INT", SIGINT},
+        {"QUIT", SIGQUIT},
+        {"ILL", SIGILL},
+        {"TRAP", SIGTRAP},
+        {"ABRT", SIGABRT},
+        {"IOT", SIGIOT},
+        {"BUS", SIGBUS},
+        {"FPE", SIGFPE},
+        {"KILL", SIGKILL},
+        {"USR1", SIGUSR1},
+        {"SEGV", SIGSEGV},
+        {"USR2", SIGUSR2},
+        {"PIPE", SIGPIPE},
+        {"ALRM", SIGALRM},
+        {"TERM", SIGTERM},
+        {"CHLD", SIGCHLD},
+        {"CONT", SIGCONT},
+        {"STOP", SIGSTOP},
+        {"TSTP", SIGTSTP},
+        {"TTIN", SIGTTIN},
+        {"TTOU", SIGTTOU},
+        {"URG", SIGURG},
+        {"XCPU", SIGXCPU},
+        {"XFSZ", SIGXFSZ},
+        {"VTALRM", SIGVTALRM},
+        {"PROF", SIGPROF},
+        {"WINCH", SIGWINCH},
+        {"IO", SIGIO},
+        {"SYS", SIGSYS},
+/*senales que no hay en todas partes*/
+#ifdef SIGPOLL
+        {"POLL", SIGPOLL},
+#endif
+#ifdef SIGPWR
+        {"PWR", SIGPWR},
+#endif
+#ifdef SIGEMT
+        {"EMT", SIGEMT},
+#endif
+#ifdef SIGINFO
+        {"INFO", SIGINFO},
+#endif
+#ifdef SIGSTKFLT
+        {"STKFLT", SIGSTKFLT},
+#endif
+#ifdef SIGCLD
+        {"CLD", SIGCLD},
+#endif
+#ifdef SIGLOST
+        {"LOST", SIGLOST},
+#endif
+#ifdef SIGCANCEL
+        {"CANCEL", SIGCANCEL},
+#endif
+#ifdef SIGTHAW
+        {"THAW", SIGTHAW},
+#endif
+#ifdef SIGFREEZE
+        {"FREEZE", SIGFREEZE},
+#endif
+#ifdef SIGLWP
+        {"LWP", SIGLWP},
+#endif
+#ifdef SIGWAITING
+        {"WAITING", SIGWAITING},
+#endif
+        {NULL,-1},
+};    /*fin array sigstrnum */
+
+int ValorSenal(char * sen) {
+    int i;
+    for (i=0; sigstrnum[i].nombre!=NULL; i++)
+        if (!strcmp(sen, sigstrnum[i].nombre))
+            return sigstrnum[i].senal;
+    return -1;
+}/*devuelve el numero de senial a partir del nombre*/
+
+char *NombreSenal(int sen) {			/* para sitios donde no hay sig2str*/
+    int i;
+    for (i=0; sigstrnum[i].nombre!=NULL; i++)
+        if (sen==sigstrnum[i].senal)
+            return sigstrnum[i].nombre;
+    return ("SIGUNKNOWN");
+}/*devuelve el nombre senal a partir de la senal*/
+
+void jobsSO(tList *listaProcss) {
+    job *dp;  //datos proceso
+    int wstatus, status;  //
+    char buffer[100];  //para almacenar la fecha
+
+    tPos f;  //Recorremos la lista de procesos
+    for (f = first(*listaProcss) ; f != NULL ; f = next(f , *listaProcss)) {
+        dp = (f->data);
+
+        status = waitpid(dp->pid, &wstatus, WNOHANG | WUNTRACED | WCONTINUED);  //Obtenemos el estado del proceso
+
+        if (status == -1 && dp->status != SIGNALED && dp->status != FINISHED) {
+            perror("Error: waitpid");
+            continue;
         }
-        execvp(path , args);
-    }
-}
 
+        strftime(buffer, 100, "%a %d/%m/%Y %X", dp->create);
+        printf("%20s  ", buffer);
 
-void ramaFin(char *tr[]){
-    char segundoPlano;
-    char path[50] = "/bin/";
-    if(tr[0] != NULL){
-        strcat(path , tr[0]);
-        for (int i = 0; tr[i] != NULL ; ++i)
-            segundoPlano = *tr[i];
-        if(segundoPlano == '&'){
-            if(fork() == 0){
-                execv(path , tr);
+        if (status == dp->pid) {  //Si el proceso cambia de estado
+            //Actualizamos el estado
+            if (WIFEXITED(wstatus)) {
+                dp->status = FINISHED;
+                dp->senial = WEXITSTATUS(wstatus);
+                printf("%11s  %11d", "Finished", WEXITSTATUS(wstatus));
             }
-        } else;
-            //execv(path , tr); socorro
+
+            else if (WIFSIGNALED(wstatus)) {
+                dp->status = SIGNALED;
+                dp->senial = WTERMSIG(wstatus);
+
+                printf("%11s  %11s", "Signaled", NombreSenal(WTERMSIG(wstatus)));
+            }
+
+            else if (WIFSTOPPED(wstatus)) {
+                dp->status = STOPPED;
+                dp->senial = WSTOPSIG(wstatus);
+
+                printf("%11s  %11s", "Stopped", NombreSenal(WSTOPSIG(wstatus)));
+                break;  //Salimos del bucle si el proceso se ha detenido
+            }
+
+            else if (WIFCONTINUED(wstatus)) {
+                dp->status = ACTIVE;
+                dp->senial = SIGCONT;
+
+                printf("%11s  %11s  ","Active", NombreSenal(SIGCONT));
+                break;  //Salimos tambien si se ha reanudado
+            }
+            else {
+                printf("%11s  %11s", "Active", "");
+            }
+        }
+        else {
+            //Reutilizar el estado previo
+            printf("%11s  ", StatusName [dp->status]);
+
+            switch (dp->status) {
+
+                case ACTIVE:
+                    printf("%11s  ", dp->senial == 0 ? "" : NombreSenal(dp->senial));
+                    break;
+                case STOPPED: case SIGNALED:
+                    printf("%11s  ", NombreSenal(dp->status));
+                    break;
+                case FINISHED:
+                    printf("%11d  ", dp->status);
+                    break;
+            }
+        }
+        printf("%s\n", dp->program);
     }
 }
-
-
-void executar(char *tr[]){
-    if(tr[1] != NULL){
-        char path[50] = "/bin/";
-        strcat(path , tr[1]);
-        fork();
-        execv(path , tr);
-    }
-}
- */
