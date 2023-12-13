@@ -40,25 +40,13 @@ struct SEN{
     int senal;
 };
 
-typedef enum {
-    ACTIVE,
-    STOPPED,
-    FINISHED,
-    SIGNALED
-}StatusProcess;
-
-static char *StatusName[] = {
-        "Active",
-        "Stopped",
-        "Finished",
-        "Signaled"
-};
 typedef struct job {
     pid_t pid;
+    char* user;
     struct tm *create;
-    StatusProcess status;
+    char* status;
+    char* senial;
     char *program;
-    int senial;
 }job;
 
 typedef struct tNode* tPos;
@@ -96,7 +84,7 @@ void* printListBlocks(tList list , char* type , void (*fptr)(void *));
 
 void* printALLListBlocks(tList list, void (*fptr)(void *));
 
-void printStrings(void* s);//declarar en funciones
+void printStrings(void* s);
 
 void printStructs(void* s);
 

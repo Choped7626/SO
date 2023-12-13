@@ -119,10 +119,12 @@ void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* 
         executar(tr);
     else if (strcmp(tr[0] , "jobs") == 0)
         jobsSO(listProcss);
+    else if (strcmp(tr[0] , "deljobs") == 0)
+        deljobs(tr , listProcss);
     else if ((strcmp(tr[0], "quit") == 0) || (strcmp(tr[0], "exit") == 0) || (strcmp(tr[0], "bye") == 0))
         closeShell(fin);
     else
-        ramaFin(tr , listProcss);
+        ramaFin(tr , listProcss , evitarLeaks);
 }
 
 void authors(char opciones[]){
@@ -299,8 +301,6 @@ void closeSO (char *tr[] , tList *listOpen){
 }
 
 void deleteOpenFiles(int df, tList *listOpen){
-
-
     tPos fich;
     fich = findCommORdf(*listOpen , (void*)(long)df);
     if (fich == NULL){
@@ -1563,7 +1563,7 @@ void MuestraEntorno (char **entorno, char * nombre_entorno) {
     }
 }
 
-void showvar(char *tr[] , int argc , char *argv[] , char *env[]) {///ben xa creo
+void showvar(char *tr[] , int argc , char *argv[] , char *env[]) {
     if(tr[1] != NULL){
         int posArg3 , posEnviron , posGetenv;
         posArg3 = BuscarVariable(tr[1] , env);
@@ -1601,7 +1601,7 @@ int CambiarVariable(char * var, char * valor, char *e[] , tList *evitarLeaks) { 
     if ((pos=BuscarVariable(var,e))==-1)
         return(-1);
 
-    if ((aux=(char *)malloc(strlen(var)+strlen(valor)+2))==NULL)///memory leak lol
+    if ((aux=(char *)malloc(strlen(var)+strlen(valor)+2))==NULL)
         return -1;
 
     strcpy(aux,var);
@@ -1614,7 +1614,7 @@ int CambiarVariable(char * var, char * valor, char *e[] , tList *evitarLeaks) { 
 
 void changevar(char *tr[] , char *env[] , tList *evitarLeaks){
     if((tr[1] != NULL)&&(tr[2] != NULL)&&(tr[3] != NULL)){
-        char *string = malloc(sizeof (char *));///memory leak lol
+        char *string = malloc(sizeof (char *));
         add_address_to_list(evitarLeaks , string);
         if(strcmp(tr[1] , "-a") == 0){
             if(CambiarVariable(tr[2] , tr[3] , env , evitarLeaks) == -1)
@@ -1633,9 +1633,9 @@ void changevar(char *tr[] , char *env[] , tList *evitarLeaks){
         printf("Uso: changevar [-a|-e|-p] var valor\n");
 }
 
-void subsvar(char *tr[] , char* env[] , tList *evitarLeaks){ ///apostaría a q funciona vaya pero hay q ir pa cama
+void subsvar(char *tr[] , char* env[] , tList *evitarLeaks){
     if((tr[1] != NULL) && (tr[2] != NULL) && (tr[3] != NULL) && (tr[4] != NULL)){
-        char* sol = malloc(sizeof (char *));///memory leak lol
+        char* sol = malloc(sizeof (char *));
         add_address_to_list(evitarLeaks , sol);
         int esteDebeExistir = -1;
         int esteNo = -1;
@@ -1685,7 +1685,7 @@ void executar(char* tr[]){
     }
 }
 
-void ramaFin(char *tr[] , tList *listProcss){//usar man en segundo plano malo
+void ramaFin(char *tr[] , tList *listProcss , tList *evitarLeaks){//usar man en segundo plano malo
     if(tr[0] != NULL){
         pid_t pid , w;
         int wstatus;
@@ -1699,29 +1699,41 @@ void ramaFin(char *tr[] , tList *listProcss){//usar man en segundo plano malo
                 args[i + 1] = NULL;
             }
         }
-        if(plano){///lol mal
-            if(fork() == 0) {
-                /*char* aux;
-                job *proceso = malloc(sizeof (struct job));
-                time_t tiempo;
-                time(&tiempo);
-                proceso->pid = getpid();
-                proceso->create = localtime(&tiempo);
-                proceso->status = ACTIVE;
-                for (int i = 0; args[i] != NULL ; ++i) {
-                    aux = args[i];
-                    if(i == 0)
-                        snprintf(proceso->program , sizeof (char *) , "%s " , aux);
-                    strcat(proceso->program , aux);
-                    strcat(proceso->program , " ");
-                }
-                proceso->senial = 0;
-                add_process_to_list(listProcss , proceso , 0);*/
+        if(plano){
+        int childPID;
+        childPID = fork();
+            if(childPID == 0) {
                 if(execvp(tr[0] , args) == -1){
                     perror("Error al ejecutar");
                     exit(EXIT_FAILURE);
                 }
             }
+            char* aux;
+            job *proceso = malloc(sizeof (struct job));
+            time_t tiempo;
+            time(&tiempo);
+            size_t total_length = 0;
+            int i = 0;
+            while (args[i] != NULL) {
+                total_length += strlen(args[i]);
+                i++;
+            }
+            char *lineaComm = (char *)malloc(total_length);
+            strcpy(lineaComm, "");
+            i = 0;
+            while (args[i] != NULL) {
+                strcat(lineaComm, args[i]);
+                strcat(lineaComm, " ");
+                i++;
+            }
+            proceso->pid = childPID;
+            proceso->user = getlogin();
+            proceso->create = localtime(&tiempo);
+            proceso->status = "ACTIVE";
+            proceso->program = lineaComm;
+            proceso->senial = "000";
+            add_process_to_list(listProcss , proceso , childPID);
+            add_address_to_list(evitarLeaks , lineaComm);
         }else{
             if((pid = fork()) == 0){
                 if(execvp(tr[0] , args) == -1){
@@ -1816,88 +1828,69 @@ int ValorSenal(char * sen) {
     int i;
     for (i=0; sigstrnum[i].nombre!=NULL; i++)
         if (!strcmp(sen, sigstrnum[i].nombre))
-            return sigstrnum[i].senal;
+            return sigstrnum[i].senal;              /*devuelve el numero de senial a partir del nombre*/
     return -1;
-}/*devuelve el numero de senial a partir del nombre*/
+}
 
-char *NombreSenal(int sen) {			/* para sitios donde no hay sig2str*/
+char *NombreSenal(int sen) {			            /* para sitios donde no hay sig2str*/
     int i;
     for (i=0; sigstrnum[i].nombre!=NULL; i++)
         if (sen==sigstrnum[i].senal)
             return sigstrnum[i].nombre;
-    return ("SIGUNKNOWN");
-}/*devuelve el nombre senal a partir de la senal*/
+    return ("SIGUNKNOWN");                           /*devuelve el nombre senal a partir de la senal*/
+}
 
-void jobsSO(tList *listaProcss) {
-    job *dp;  //datos proceso
-    int wstatus, status;  //
-    char buffer[100];  //para almacenar la fecha
-
-    tPos f;  //Recorremos la lista de procesos
-    for (f = first(*listaProcss) ; f != NULL ; f = next(f , *listaProcss)) {
-        dp = (f->data);
-
-        status = waitpid(dp->pid, &wstatus, WNOHANG | WUNTRACED | WCONTINUED);  //Obtenemos el estado del proceso
-
-        if (status == -1 && dp->status != SIGNALED && dp->status != FINISHED) {
-            perror("Error: waitpid");
-            continue;
-        }
-
-        strftime(buffer, 100, "%a %d/%m/%Y %X", dp->create);
-        printf("%20s  ", buffer);
-
-        if (status == dp->pid) {  //Si el proceso cambia de estado
-            //Actualizamos el estado
+void jobsSO(tList *listaPRocss){
+    job *proceso;
+    char buffer[100];
+    int wstatus , status;
+    tPos p;
+    for (p = first(*listaPRocss) ; p != NULL ; p = next(p , *listaPRocss)) {
+        proceso = p->data;
+        strftime(buffer, 100, "%d/%m/%Y %X", proceso->create);
+        status = waitpid(proceso->pid, &wstatus, WNOHANG | WUNTRACED | WCONTINUED);
+        if (status == proceso->pid) {
             if (WIFEXITED(wstatus)) {
-                dp->status = FINISHED;
-                dp->senial = WEXITSTATUS(wstatus);
-                printf("%11s  %11d", "Finished", WEXITSTATUS(wstatus));
-            }
-
-            else if (WIFSIGNALED(wstatus)) {
-                dp->status = SIGNALED;
-                dp->senial = WTERMSIG(wstatus);
-
-                printf("%11s  %11s", "Signaled", NombreSenal(WTERMSIG(wstatus)));
-            }
-
-            else if (WIFSTOPPED(wstatus)) {
-                dp->status = STOPPED;
-                dp->senial = WSTOPSIG(wstatus);
-
-                printf("%11s  %11s", "Stopped", NombreSenal(WSTOPSIG(wstatus)));
-                break;  //Salimos del bucle si el proceso se ha detenido
-            }
-
-            else if (WIFCONTINUED(wstatus)) {
-                dp->status = ACTIVE;
-                dp->senial = SIGCONT;
-
-                printf("%11s  %11s  ","Active", NombreSenal(SIGCONT));
-                break;  //Salimos tambien si se ha reanudado
-            }
-            else {
-                printf("%11s  %11s", "Active", "");
+                proceso->status = "FINISHED";
+                proceso->senial = "000";
+            } else if (WIFSIGNALED(wstatus)) {
+                proceso->status = "SIGNALED";
+                proceso->senial = NombreSenal(WTERMSIG(wstatus));
+            } else if (WIFSTOPPED(wstatus)) {
+                proceso->status = "STOPPED";
+                proceso->senial = NombreSenal(WSTOPSIG(wstatus));
+            } else if (WIFCONTINUED(wstatus)) {
+                proceso->status = "ACTIVE";
+                proceso->senial = NombreSenal(SIGCONT);
             }
         }
-        else {
-            //Reutilizar el estado previo
-            printf("%11s  ", StatusName [dp->status]);
+        printf("%d %s p=%d %s %s (%s) %s\n" , proceso->pid , proceso->user , getpriority(PRIO_PROCESS , proceso->pid) , buffer ,
+               proceso->status , proceso->senial , proceso->program);
+    }
+}
 
-            switch (dp->status) {
-
-                case ACTIVE:
-                    printf("%11s  ", dp->senial == 0 ? "" : NombreSenal(dp->senial));
-                    break;
-                case STOPPED: case SIGNALED:
-                    printf("%11s  ", NombreSenal(dp->status));
-                    break;
-                case FINISHED:
-                    printf("%11d  ", dp->status);
-                    break;
+void deljobs (char *tr[], tList *listaProcss) {//creeo q non hay problemas de recursividad
+    if (tr[1] != NULL) {
+        tPos i;
+        job *pr = malloc(sizeof(job));
+        for (i = first(*listaProcss); i != NULL; i = next(i, *listaProcss)) {
+            pr = i->data;
+            if (strcmp(tr[1], "-term") == 0) {
+                if (strcmp(pr->status , "FINISHED") == 0){
+                    remove_from_list(listaProcss, i);
+                    deljobs(tr , listaProcss);
+                    return;
+                }
+            } else if (strcmp(tr[1], "-sig") == 0) {
+                if (strcmp(pr->status , "SIGNALED") == 0){
+                    remove_from_list(listaProcss, i);
+                    deljobs(tr , listaProcss);
+                    return;
+                }
             }
         }
-        printf("%s\n", dp->program);
+    }
+    else {
+        jobsSO(listaProcss);
     }
 }

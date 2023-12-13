@@ -38,7 +38,7 @@ void recurse(char* tr[]);
 void writeSO(char *ar[]);
 void readSO (char *ar[]);
 void memdump(char *tr[]);
-void ramaFin(char *tr[] , tList *listProcss);
+void ramaFin(char *tr[] , tList *listProcss , tList *evitarLeaks);
 void forkSO(char *tr[] , tList *listProcss);
 void executar(char* tr[]);
 void uid(char *tr[]);
@@ -47,4 +47,5 @@ void showenv(char *tr[] , char *env[]);
 void changevar(char *tr[] , char *env[] , tList *evitarLeaks);
 void subsvar(char *tr[] , char* env[] , tList *evitarLeaks);
 void jobsSO(tList *listProcss);
+void deljobs (char *tr[], tList *listaProcss);
 #endif //SO_P0_CABECERAS_H
