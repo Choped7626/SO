@@ -121,6 +121,8 @@ void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* 
         jobsSO(listProcss);
     else if (strcmp(tr[0] , "deljobs") == 0)
         deljobs(tr , listProcss);
+    else if (strcmp(tr[0], "job") == 0)
+        jobSO(tr, listProcss , evitarLeaks);
     else if ((strcmp(tr[0], "quit") == 0) || (strcmp(tr[0], "exit") == 0) || (strcmp(tr[0], "bye") == 0))
         closeShell(fin);
     else
@@ -1565,7 +1567,7 @@ void MuestraEntorno (char **entorno, char * nombre_entorno) {
 
 void showvar(char *tr[] , int argc , char *argv[] , char *env[]) {
     if(tr[1] != NULL){
-        int posArg3 , posEnviron , posGetenv;
+        int posArg3 , posEnviron;
         posArg3 = BuscarVariable(tr[1] , env);
         posEnviron = BuscarVariable(tr[1] , environ);
         if(posArg3 != -1)
@@ -1708,19 +1710,13 @@ void ramaFin(char *tr[] , tList *listProcss , tList *evitarLeaks){//usar man en 
                     exit(EXIT_FAILURE);
                 }
             }
-            char* aux;
             job *proceso = malloc(sizeof (struct job));
             time_t tiempo;
             time(&tiempo);
             size_t total_length = 0;
             int i = 0;
-            while (args[i] != NULL) {
-                total_length += strlen(args[i]);
-                i++;
-            }
-            char *lineaComm = (char *)malloc(total_length);
+            char *lineaComm = malloc(sizeof (char*));
             strcpy(lineaComm, "");
-            i = 0;
             while (args[i] != NULL) {
                 strcat(lineaComm, args[i]);
                 strcat(lineaComm, " ");
@@ -1893,4 +1889,51 @@ void deljobs (char *tr[], tList *listaProcss) {//creeo q non hay problemas de re
     else {
         jobsSO(listaProcss);
     }
+}
+
+void jobSO (char *tr[], tList *listaProcss , tList *evitarLeaks) {
+    if (tr[1] != NULL) {
+        job *pr = malloc(sizeof(job));
+        add_address_to_list(evitarLeaks , pr);
+        if (tr[2] != NULL) {//Si tenemos  0:job  1:-fg  2:pid
+            if (strcmp(tr[1], "-fg") == 0) {
+                tPos i;
+                pid_t pid_aux = (pid_t) atoi(tr[2]);   //Guardamos el pid
+                for (i = first(*listaProcss); i != NULL; i = next(i, *listaProcss)) {
+                        if (i->dfORCommNUm == pid_aux) {
+                            int wstatus;
+                            pr = i->data;
+                            if(tcsetpgrp(STDIN_FILENO, getpgid(pr->pid)) == -1){
+                                printf("Proceso %d ya terminado\n" , pr->pid);
+                                return;
+                            }
+
+                            waitpid(pr->pid, &wstatus, WUNTRACED);
+                            if(wstatus == 0){
+                                printf("Proceso %d terminado normalmente. Valor devuelto %d\n" , pr->pid , wstatus);
+                            }else
+                                printf("Proceso %d terminado por la señal %s\n" , pr->pid , NombreSenal(wstatus));
+
+                            if (tcsetpgrp(STDIN_FILENO, getpgrp()) == -1) {
+                                return;
+                            }
+                            remove_from_list(listaProcss, i);
+                    }
+                }
+            }
+        }else{
+            tPos i;
+            int pid_aux = atoi(tr[1]);  //Guardamos el pid
+            char buffer[100];
+            for(i = first(*listaProcss); i != NULL; i = next(i, *listaProcss)) {
+                if (i->dfORCommNUm == pid_aux){
+                    pr = i->data;
+                    strftime(buffer, 100, "%d/%m/%Y %X", pr->create);
+                    printf("%d %s p=%d %s %s (%s) %s\n" , pr->pid , pr->user , getpriority(PRIO_PROCESS , pr->pid) , buffer ,
+                           pr->status , pr->senial , pr->program);
+                }
+            }
+        }
+    }else
+        jobsSO(listaProcss);
 }

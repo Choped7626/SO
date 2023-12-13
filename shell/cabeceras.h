@@ -48,4 +48,5 @@ void changevar(char *tr[] , char *env[] , tList *evitarLeaks);
 void subsvar(char *tr[] , char* env[] , tList *evitarLeaks);
 void jobsSO(tList *listProcss);
 void deljobs (char *tr[], tList *listaProcss);
+void jobSO(char *tr[], tList *listaProcss , tList *evitarLeaks);
 #endif //SO_P0_CABECERAS_H
