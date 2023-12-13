@@ -539,7 +539,7 @@ void help (char opciones[]){
         printf("Ends the shell\n");
     }
     else
-        printf("Comando Inexistente");
+        printf("Comando Inexistente\n");
 }
 
 void meterDatos(const int* num , char *tr[], tList *hist){
@@ -1691,7 +1691,7 @@ void ramaFin(char *tr[] , tList *listProcss , tList *evitarLeaks){//usar man en 
     if(tr[0] != NULL){
         pid_t pid , w;
         int wstatus;
-        char *args[25];
+        char *args[256];
         bool plano = false;
         for (int i = 0; tr[i] != NULL; ++i) {
             if (strcmp(tr[i], "&") == 0) {
@@ -1710,13 +1710,20 @@ void ramaFin(char *tr[] , tList *listProcss , tList *evitarLeaks){//usar man en 
                     exit(EXIT_FAILURE);
                 }
             }
+
             job *proceso = malloc(sizeof (struct job));
             time_t tiempo;
             time(&tiempo);
             size_t total_length = 0;
             int i = 0;
-            char *lineaComm = malloc(sizeof (char*));
+            while (args[i] != NULL) {
+                total_length += strlen(args[i]);
+                i++;
+            }
+            total_length++;
+            char *lineaComm = malloc(total_length);
             strcpy(lineaComm, "");
+            i = 0;
             while (args[i] != NULL) {
                 strcat(lineaComm, args[i]);
                 strcat(lineaComm, " ");
@@ -1914,9 +1921,7 @@ void jobSO (char *tr[], tList *listaProcss , tList *evitarLeaks) {
                             }else
                                 printf("Proceso %d terminado por la señal %s\n" , pr->pid , NombreSenal(wstatus));
 
-                            if (tcsetpgrp(STDIN_FILENO, getpgrp()) == -1) {
-                                return;
-                            }
+
                             remove_from_list(listaProcss, i);
                     }
                 }
