@@ -1722,6 +1722,7 @@ void ramaFin(char *tr[] , tList *listProcss , tList *evitarLeaks){//usar man en 
             }
             total_length++;
             char *lineaComm = malloc(total_length);
+            add_address_to_list(evitarLeaks , lineaComm);
             strcpy(lineaComm, "");
             i = 0;
             while (args[i] != NULL) {
@@ -1729,6 +1730,7 @@ void ramaFin(char *tr[] , tList *listProcss , tList *evitarLeaks){//usar man en 
                 strcat(lineaComm, " ");
                 i++;
             }
+
             proceso->pid = childPID;
             proceso->user = getlogin();
             proceso->create = localtime(&tiempo);
@@ -1736,7 +1738,8 @@ void ramaFin(char *tr[] , tList *listProcss , tList *evitarLeaks){//usar man en 
             proceso->program = lineaComm;
             proceso->senial = "000";
             add_process_to_list(listProcss , proceso , childPID);
-            add_address_to_list(evitarLeaks , lineaComm);
+            free(proceso);
+
         }else{
             if((pid = fork()) == 0){
                 if(execvp(tr[0] , args) == -1){
@@ -1875,20 +1878,18 @@ void jobsSO(tList *listaPRocss){
 void deljobs (char *tr[], tList *listaProcss) {//creeo q non hay problemas de recursividad
     if (tr[1] != NULL) {
         tPos i;
-        job *pr = malloc(sizeof(job));
+        job *pr;
         for (i = first(*listaProcss); i != NULL; i = next(i, *listaProcss)) {
             pr = i->data;
             if (strcmp(tr[1], "-term") == 0) {
                 if (strcmp(pr->status , "FINISHED") == 0){
                     remove_from_list(listaProcss, i);
-                    deljobs(tr , listaProcss);
-                    return;
+                    i = listaProcss->head;
                 }
             } else if (strcmp(tr[1], "-sig") == 0) {
                 if (strcmp(pr->status , "SIGNALED") == 0){
                     remove_from_list(listaProcss, i);
-                    deljobs(tr , listaProcss);
-                    return;
+                    i = listaProcss->head;
                 }
             }
         }
@@ -1939,6 +1940,7 @@ void jobSO (char *tr[], tList *listaProcss , tList *evitarLeaks) {
                 }
             }
         }
+        free(pr);
     }else
         jobsSO(listaProcss);
 }
