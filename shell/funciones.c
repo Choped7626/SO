@@ -1693,15 +1693,15 @@ void ramaFin(char *tr[] , tList *listProcss , tList *evitarLeaks){//usar man en 
         int wstatus;
         char *args[256] = {NULL};
         bool plano = false;
-        int i;
+        int i, aux = 0;
 
         for (i = 0; tr[i] != NULL; ++i) {
             if (strcmp(tr[i], "&") == 0) {
                 plano = true;
-                break;
+                aux = -1;
             } else {
-                args[i] = tr[i];
-                args[i + 1] = NULL;
+                args[i + aux] = tr[i];
+                args[i + 1 + aux] = NULL;
             }
         }
 
