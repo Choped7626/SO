@@ -654,39 +654,39 @@ void statSO(char* tr[]){
             lstat(tr[name] , &info);
             size = info.st_size;
 
-        if(use_long == 1){
+            if(use_long == 1){
 
-            char hora[50];
-            strftime(hora, sizeof(hora), "%c", localtime(&info.st_mtim.tv_sec));//hora de ultima modificacion
-            int links = (int) info.st_nlink;
-            int inodo = (int) info.st_ino;
-            char *permiss = ConvierteModo(info.st_mode);
-            char direccionLinkPrint[PATH_MAX + 1] = "";
+                char hora[50];
+                strftime(hora, sizeof(hora), "%c", localtime(&info.st_mtim.tv_sec));//hora de ultima modificacion
+                int links = (int) info.st_nlink;
+                int inodo = (int) info.st_ino;
+                char *permiss = ConvierteModo(info.st_mode);
+                char direccionLinkPrint[PATH_MAX + 1] = "";
 
-            if(use_link == 1){//usa long e link
-                char direccionLink[PATH_MAX + 1] = "";
-                if (readlink(tr[name], direccionLink, PATH_MAX) == -1) {
+                if(use_link == 1){//usa long e link
+                    char direccionLink[PATH_MAX + 1] = "";
+                    if (readlink(tr[name], direccionLink, PATH_MAX) == -1) {
 
-                }else {
-                    if (strlen(direccionLink) > 0) {
-                        strcat(direccionLinkPrint, " -> ");
-                        strcat(direccionLinkPrint, direccionLink);
+                    }else {
+                        if (strlen(direccionLink) > 0) {
+                            strcat(direccionLinkPrint, " -> ");
+                            strcat(direccionLinkPrint, direccionLink);
+                        }
                     }
                 }
-            }
 
-            if(use_acc == 1){//usa long e acc
+                if(use_acc == 1){//usa long e acc
 
-                strftime(hora, sizeof(hora), "%c", localtime(&info.st_atim.tv_sec));//hora de ultimo acceso
+                    strftime(hora, sizeof(hora), "%c", localtime(&info.st_atim.tv_sec));//hora de ultimo acceso
 
-            }//usa solo long
+                }//usa solo long
 
-            printf("%25s %3d(%8d) %10s %10s %10s %6ld %15s%15s\n", hora, links, inodo, getpwuid(info.st_uid)->pw_name,
+                printf("%25s %3d(%8d) %10s %10s %10s %6ld %15s%15s\n", hora, links, inodo, getpwuid(info.st_uid)->pw_name,
                        getgrgid(info.st_gid)->gr_name, permiss, size, tr[name] , direccionLinkPrint);
 
-        }else{
-            printf("%6ld %15s\n" , size , tr[name]);
-        }
+            }else{
+                printf("%6ld %15s\n" , size , tr[name]);
+            }
 
         }else{
             printf("error al acceder a %s : %s\n" , tr[name] , strerror(errno));
@@ -1596,7 +1596,7 @@ void showenv(char* tr[] , char *env[]){
 }
 
 int CambiarVariable(char * var, char * valor, char *e[] , tList *evitarLeaks) { /*cambia una variable en el entorno que se le pasa como parámetro*/
-                                                        /*lo hace directamente, no usa putenv*/
+    /*lo hace directamente, no usa putenv*/
     int pos;
     char *aux;
 
@@ -1691,19 +1691,23 @@ void ramaFin(char *tr[] , tList *listProcss , tList *evitarLeaks){//usar man en 
     if(tr[0] != NULL){
         pid_t pid , w;
         int wstatus;
-        char *args[256];
+        char *args[256] = {NULL};
         bool plano = false;
-        for (int i = 0; tr[i] != NULL; ++i) {
+        int i;
+
+        for (i = 0; tr[i] != NULL; ++i) {
             if (strcmp(tr[i], "&") == 0) {
                 plano = true;
+                break;
             } else {
                 args[i] = tr[i];
                 args[i + 1] = NULL;
             }
         }
+
         if(plano){
-        int childPID;
-        childPID = fork();
+            int childPID;
+            childPID = fork();
             if(childPID == 0) {
                 if(execvp(tr[0] , args) == -1){
                     perror("Error al ejecutar");
@@ -1712,32 +1716,38 @@ void ramaFin(char *tr[] , tList *listProcss , tList *evitarLeaks){//usar man en 
             }
 
             job *proceso = malloc(sizeof (struct job));
-            time_t tiempo;
-            time(&tiempo);
-            size_t total_length = 0;
-            int i = 0;
-            while (args[i] != NULL) {
-                total_length += strlen(args[i]);
-                i++;
+            if (!proceso) {  ///Comprobacion
+                perror("Fallo en malloc para proceso");
+                return;
             }
-            total_length++;
+
+            size_t total_length = 0;
+            for(i = 0; args[i] != NULL; i++) {
+                total_length += strlen(args[i]) + 1; /// +1 para espacio o nulo
+            }
+
             char *lineaComm = malloc(total_length);
-            add_address_to_list(evitarLeaks , lineaComm);
-            strcpy(lineaComm, "");
-            i = 0;
-            while (args[i] != NULL) {
-                strcat(lineaComm, args[i]);
+            if (!lineaComm) {  ///Comprobacion
+                perror("Fallo en malloc para lineaComm");
+                free(proceso);
+                return;
+            }
+            strcpy(lineaComm, args[0]);
+            for (i = 1; args[i] != NULL; i++) {
                 strcat(lineaComm, " ");
-                i++;
+                strcat(lineaComm, args[i]);
             }
 
             proceso->pid = childPID;
             proceso->user = getlogin();
+            time_t tiempo;
+            time(&tiempo);
             proceso->create = localtime(&tiempo);
             proceso->status = "ACTIVE";
             proceso->program = lineaComm;
             proceso->senial = "000";
             add_process_to_list(listProcss , proceso , childPID);
+            add_address_to_list(evitarLeaks, lineaComm);
             free(proceso);
 
         }else{
@@ -1908,22 +1918,22 @@ void jobSO (char *tr[], tList *listaProcss , tList *evitarLeaks) {
                 tPos i;
                 pid_t pid_aux = (pid_t) atoi(tr[2]);   //Guardamos el pid
                 for (i = first(*listaProcss); i != NULL; i = next(i, *listaProcss)) {
-                        if (i->dfORCommNUm == pid_aux) {
-                            int wstatus;
-                            pr = i->data;
-                            if(tcsetpgrp(STDIN_FILENO, getpgid(pr->pid)) == -1){
-                                printf("Proceso %d ya terminado\n" , pr->pid);
-                                return;
-                            }
+                    if (i->dfORCommNUm == pid_aux) {
+                        int wstatus;
+                        pr = i->data;
+                        if(tcsetpgrp(STDIN_FILENO, getpgid(pr->pid)) == -1){
+                            printf("Proceso %d ya terminado\n" , pr->pid);
+                            return;
+                        }
 
-                            waitpid(pr->pid, &wstatus, WUNTRACED);
-                            if(wstatus == 0){
-                                printf("Proceso %d terminado normalmente. Valor devuelto %d\n" , pr->pid , wstatus);
-                            }else
-                                printf("Proceso %d terminado por la señal %s\n" , pr->pid , NombreSenal(wstatus));
+                        waitpid(pr->pid, &wstatus, WUNTRACED);
+                        if(wstatus == 0){
+                            printf("Proceso %d terminado normalmente. Valor devuelto %d\n" , pr->pid , wstatus);
+                        }else
+                            printf("Proceso %d terminado por la señal %s\n" , pr->pid , NombreSenal(wstatus));
 
 
-                            remove_from_list(listaProcss, i);
+                        remove_from_list(listaProcss, i);
                     }
                 }
             }
