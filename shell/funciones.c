@@ -1520,9 +1520,12 @@ void uid(char *tr[]){//a hora de imprimir imprime mal o nombre ¿talvez?
                     if(tr[3] != NULL){
                         struct passwd *idDesdeLogin;
                         idDesdeLogin = (getpwnam(tr[3]));
-                        if(setuid(idDesdeLogin->pw_uid) == -1){
-                            perror("Error al cambiar credencial efectiva\n");
-                        }
+                        if(idDesdeLogin != NULL){
+                            if(setuid(idDesdeLogin->pw_uid) == -1){
+                                perror("Error al cambiar credencial efectiva\n");
+                            }
+                        }else
+                            printf("Usuario no existente %s\n" , tr[3]);
                     }
                 }else{
                     id = atoi(tr[2]);
@@ -1932,8 +1935,8 @@ void jobSO (char *tr[], tList *listaProcss , tList *evitarLeaks) {
                         }else
                             printf("Proceso %d terminado por la señal %s\n" , pr->pid , NombreSenal(wstatus));
 
-
                         remove_from_list(listaProcss, i);
+                        break;
                     }
                 }
             }
@@ -1950,7 +1953,6 @@ void jobSO (char *tr[], tList *listaProcss , tList *evitarLeaks) {
                 }
             }
         }
-        free(pr);
     }else
         jobsSO(listaProcss);
 }
