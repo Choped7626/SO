@@ -1,6 +1,6 @@
 /*
-Nombre: Daniel Puñal Diaz       Login:  daniel.punal.diaz@udc.es    Grupo:3.2
-Nombre: Mario Lamas Angeriz     Login: m.lamasa@udc.es              Grupo:3.2
+Nombre:  Login:   Grupo:
+Nombre:  Login:   Grupo:
 */
 #include "cabeceras.h"
 
