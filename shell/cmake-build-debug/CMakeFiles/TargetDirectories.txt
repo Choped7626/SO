@@ -1,3 +1,0 @@
-/home/choped/Documents/primer quatri/SO/shell/cmake-build-debug/CMakeFiles/SO_p0.dir
-/home/choped/Documents/primer quatri/SO/shell/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/choped/Documents/primer quatri/SO/shell/cmake-build-debug/CMakeFiles/rebuild_cache.dir
