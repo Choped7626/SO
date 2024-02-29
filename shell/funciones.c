@@ -1,6 +1,6 @@
 /*
-Nombre: Daniel Puñal Diaz       Login:  daniel.punal.diaz@udc.es    Grupo:3.2
-Nombre: Mario Lamas Angeriz     Login: m.lamasa@udc.es              Grupo:3.2
+Nombre:    Grupo:
+Nombre:    Grupo:
 */
 /*
  * cambios q estarian chingones:
@@ -132,16 +132,16 @@ void whichCommand(char *tr[], tList *histComm , int* commNum , bool* fin , int* 
 void authors(char opciones[]){
     if(opciones == NULL){
 
-        printf("Logins: \t m.lamasa@udc.es \t daniel.punal.diaz@udc.es\n");
-        printf("Nombres: \t Mario Lamas Angeriz \t Daniel Puñal Diaz\n");
+        printf("Logins: \t Si oh \t ahora mismo chos digo \n");
+        printf("Nombres: \t non ah oh \t mamala \n");
 
     }else if(strcmp(opciones , "-l") == 0){
 
-        printf("Logins: \t m.lamasa@udc.es \t daniel.punal.diaz@udc.es\n");
+        printf("Logins: \t Si oh \t ahora mismo chos digo \n");
 
     }else if(strcmp(opciones , "-n") == 0){
 
-        printf("Nombres: \t Mario Lamas Angeriz \t Daniel Puñal Diaz\n");
+        printf("Nombres: \t non ah oh \t mamala \n");
 
     }else
         printf("Opcion Inexistente");
